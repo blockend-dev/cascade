@@ -9,3 +9,5 @@ cache/
 artifacts/
 typechain-types/
 .DS_Store
+
+.claude/
