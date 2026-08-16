@@ -1,0 +1,20 @@
+{
+  "name": "@cascade/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cascade protocol contracts",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.5",
+    "typescript": "^5.5.4",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
