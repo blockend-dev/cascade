@@ -9,6 +9,10 @@ const config: HardhatUserConfig = {
     version: "0.8.24",
     settings: {
       optimizer: { enabled: true, runs: 200 },
+      // OpenZeppelin's Bytes.sol (pulled in transitively via EIP712/ECDSA)
+      // uses MCOPY, a Cancun opcode. 0G Chain's own docs note Cancun
+      // compatibility (docs/adr/0002 background) — targeting it here too.
+      evmVersion: "cancun",
     },
   },
   paths: {
