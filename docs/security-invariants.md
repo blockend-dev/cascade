@@ -68,6 +68,33 @@ marked as an economic (not cryptographic) property.
   one broken or malicious recipient address cannot block payment to anyone
   else.
 
+## Settlement invariants (Phase 4, `AttributionSettlement`)
+
+- **INV-17 (confidence composition, per edge, never gating).**
+  `effectiveConfidence = min(edge.confidenceLevel, servingConfidence)`,
+  computed independently for every traversed edge, never averaged, never
+  inherited from a stronger edge elsewhere in the path. It is emitted for
+  audit purposes and never blocks or reduces a payment — see
+  `docs/protocol-spec.md` §6 and ADR 0006.
+- **INV-18 (finalized-only traversal).** Only `Finalized` edges are walked.
+  `Pending`, `Challenged`, and `Rejected` edges contribute nothing to
+  attribution, and the amount that would have flowed through them stays
+  folded into the residual of the nearer node instead.
+- **INV-19 (bounded traversal, two independent axes).** Traversal is capped
+  by both `CascadeRegistry.maxDepth()` (depth) and
+  `AttributionSettlement.maxAncestorsPerSettlement` (total nodes visited).
+  Exceeding either cap truncates that branch of the traversal — it never
+  reverts the settlement.
+- **INV-20 (single notion of execution identity).** `AttributionSettlement`
+  introduces no replay-protection state of its own; it calls
+  `ExecutionRegistry.consumeUsageProof`, which owns `executionConsumed`
+  (Phase 3). A second, settlement-side consumed-map would be redundant and
+  a source of drift — deliberately not built.
+- **INV-21 (exact funding, no relayer discretion over amount).**
+  `settleExecution` requires `msg.value == attributionFeePerExecution`
+  exactly. See ADR 0008 — the amount is never relayer- or
+  submitter-supplied, by construction, not by convention.
+
 ## Explicitly economic, not cryptographic
 
 INV-6 through INV-11 bound *behavior* through stake and bonds; they do not

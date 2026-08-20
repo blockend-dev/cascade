@@ -158,39 +158,49 @@ registered `royaltyBps` values and signs off on the arithmetic. See
 `docs/security-invariants.md` for the exact conservation invariant this
 must satisfy.
 
-## 4. Settlement flow
+## 4. Settlement flow (implemented Phase 4)
+
+The original sketch of this section, written before `AttributionSettlement`
+existed, assumed an off-chain indexer batching many executions per epoch
+into one compact on-chain submission. Phase 4 was built without that
+indexer (Phase 9 doesn't exist yet) — the actual, working, tested flow
+settles **one execution per call**, with `epoch` as a coarse tag grouping
+many independent calls, not a batched submission:
 
 ```
 verified usage event (0G TEE-signed response, independently re-checkable)
         ↓
-UsageProof constructed + EIP-712 signed by whoever submits it (the relayer,
-or anyone else holding the same public evidence)
+UsageProof constructed + EIP-712 signed by whoever holds a registered
+signer key (the provider or its enclave)
         ↓
-submitted to AttributionSettlement (permissionless — see docs/threat-model.md #9)
+AttributionSettlement.settleExecution(proof, signature), payable, called
+by anyone — permissionless, see docs/threat-model.md #9
         ↓
-contract verifies: nonce not previously consumed; recovered signer matches
-a registered provider/relayer role appropriate to the proof type; epoch is
-open
+requires: proof.epoch == currentEpoch (InvalidEpoch otherwise); msg.value
+== attributionFeePerExecution exactly (IncorrectFunding otherwise — see
+ADR 0008, no relayer-chosen amount, ever)
         ↓
-usage accepted into that epoch's accumulator (off-chain until epoch close)
+calls ExecutionRegistry.consumeUsageProof — Phase 3's own replay
+protection (executionConsumed), reused directly, not reimplemented
         ↓
-epoch close: indexer computes the DAG-resolved split for every model that
-had usage this epoch, off-chain
+bounded recursive traversal of the model's finalized CascadeRegistry
+lineage edges (§6), multiplicatively splitting the funded amount, capped
+by both CascadeRegistry.maxDepth() and maxAncestorsPerSettlement
         ↓
-settlement submission: compact per-model split, checked on-chain against
-registered edges' royaltyBps and the weakest-link confidence rule — the
-contract does NOT re-walk the DAG, it verifies the submitted split sums
-correctly and matches what the registered graph allows
+claimable balances credited per current registered owner (pull payment)
         ↓
-claimable balances credited per ancestor (pull payment)
-        ↓
-ancestor calls claim() — checks-effects-interactions, reentrancy-guarded
+owner calls claim() — checks-effects-interactions, reentrancy-guarded
 ```
 
 **Why 0G's own serving payment is not touched.** Per ADR 0003, Cascade's
 attribution fee is paid by the buyer in parallel to 0G's own inference fee,
 not skimmed from a provider's 0G payout. This removes provider-default risk
 from Cascade's trust model entirely — it was never Cascade's to inherit.
+
+A batching convenience layer (many executions, one relayer-submitted
+transaction) remains reasonable future work — see §6 — but was not needed
+to make settlement actually work end to end, and was deliberately left out
+of Phase 4 to keep the settlement contract small enough to audit.
 
 ## 4a. Worked example — TEE evidence to a verified execution
 
@@ -218,13 +228,11 @@ from Cascade's trust model entirely — it was never Cascade's to inherit.
    executionId, requestHash, responseHash, servingConfidence }`. Every field
    is either recovered cryptographically or looked up from trusted
    contract state — none of it is an echo of attacker-controlled calldata.
-6. **Not yet built:** Phase 4's `AttributionSettlement` will take a batch of
-   `VerifiedUsage` results per epoch, resolve each `modelId`'s finalized
-   lineage DAG in `CascadeRegistry`, and credit ancestors proportionally,
-   at a trust level of `min(servingConfidence, weakest finalized edge along
-   the path)` — see ADR 0006. This step does not exist in the codebase yet;
-   it is described here only so the boundary Phase 3 hands off is legible
-   before Phase 4 is designed against it.
+6. `AttributionSettlement.settleExecution` (Phase 4, implemented) takes that
+   `VerifiedUsage`, resolves `modelId`'s finalized lineage graph in
+   `CascadeRegistry`, and credits ancestors proportionally. See §6 for the
+   full mechanics — traversal, confidence composition, rounding, and the
+   funding model.
 
 ## 5. What each confidence level is permitted to claim publicly
 
@@ -243,3 +251,85 @@ drift apart. See `docs/trust-model.md` for the underlying reasoning.
 Forbidden regardless of level: "cryptographically bound to the fact that
 model C was served" as a blanket claim; "proof of training" without a
 hedge; "trustless" applied to anything Level 2 or 3.
+
+## 6. AttributionSettlement (implemented Phase 4)
+
+### Funding
+
+One protocol-configured flat fee, `attributionFeePerExecution` (default
+`0.001 ether`, owner-adjustable), required exactly as `msg.value` on every
+`settleExecution` call — see ADR 0008. No relayer, submitter, or anyone
+else ever supplies or influences the amount.
+
+### Traversal and the multiplicative cascade
+
+Given a served model's `amount` (the funded fee), `_distribute` walks its
+**finalized** direct-parent edges only (`Pending`/`Challenged`/`Rejected`
+edges are skipped — unfinalized or disputed lineage never receives
+attribution). Each edge's registered `royaltyBps` is applied to the amount
+flowing into *that specific node*, not to the original top-level amount —
+matching `CascadeRegistry`'s own `totalParentBps` semantics, which are
+scoped per-child. The parent's resulting share is then itself recursively
+subject to the parent's *own* parent edges, cascading upward. Whatever
+remains after a node's direct parents are paid is credited to that node's
+current registered owner.
+
+This means a diamond DAG (two different paths reaching the same ancestor)
+credits that ancestor twice, once per path — intended behavior, not a bug;
+each path is an independent, already-capped royalty agreement.
+
+Traversal is bounded on two independent axes, both disclosed limitations
+rather than silent failures or reverts:
+- **Depth** — `CascadeRegistry.maxDepth()`, the same parameter that already
+  bounds cycle detection at registration time. Reused, not duplicated.
+- **Breadth/total nodes** — `maxAncestorsPerSettlement` (default 64), an
+  `AttributionSettlement`-local cap independent of depth, closing the
+  fan-out (`maxParentsPerModel`) side of the cost equation. Ancestors
+  beyond either cap simply receive no credit for that settlement; the
+  settlement itself never reverts due to graph size — a revert would be a
+  liveness bug (a legitimately large graph could never settle at all).
+
+### Confidence composition
+
+Per edge traversed, `effectiveConfidence = min(edge.confidenceLevel,
+triggering usage proof's servingConfidence)` (ADR 0006), emitted in
+`EdgeAttributed`. **This does not gate payment.** A `Declared`-confidence
+edge is still paid its full registered share — confidence is an audit
+signal about how strongly a payout is backed, not a filter on whether it
+happens. Gating on confidence would defeat the entire point of Level 3's
+staked-and-challengeable design, whose security model *is* "pay unless
+successfully challenged," not "don't pay until proven."
+
+### Rounding
+
+Every split uses floor-division integer arithmetic:
+`parentShare = (amount * royaltyBps) / 10_000`. The residual credited to
+each node's owner is `amount - sum(that node's parent shares)` — since
+floor division only ever *loses* fractional value, never gains it, the
+lost fraction is automatically folded into the residual of the node
+closest to it. No separate dust pool exists or is needed: summed across an
+entire settlement, `Σ OwnerCredited == msg.value`, exactly, every time —
+verified directly in tests, not merely argued for.
+
+### Replay and execution identity
+
+`AttributionSettlement` introduces no second notion of execution identity.
+It calls `ExecutionRegistry.consumeUsageProof`, which owns
+`executionConsumed` (Phase 3) — a second, settlement-side replay map would
+be redundant and a source of drift.
+
+### Claims
+
+Pull payment. `claimable[address]`, credited during `_distribute`, paid out
+in full via `claim()` — checks-effects-interactions (balance zeroed before
+the external call) plus `nonReentrant` as defense in depth. See
+`contracts/src/mocks/ReentrantClaimer.sol` and its test for a live proof,
+not just an assertion, that a malicious claimant cannot re-enter.
+
+### Trust boundary — what this contract does not establish
+
+`AttributionSettlement` never claims to prove model identity itself. It
+settles according to whatever `ExecutionRegistry` already established for
+that proof (§4a) — no stronger, no weaker. In particular, it does not
+verify a 0G TEE quote, and it has no integration with 0G's own settlement
+contract (ADR 0003) — the two payment systems remain fully parallel.
