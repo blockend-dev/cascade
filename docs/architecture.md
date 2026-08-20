@@ -99,16 +99,18 @@ model, the trust model, the protocol spec, the security invariants, and the
 ADRs recording the decisions the prior research left open.
 
 Phases 1–10 follow the order in `docs/adr/0002-repo-layout-and-tooling.md`.
-This repository currently implements through Phase 2 (CascadeRegistry with
-its built-in challenge/finalization mechanism). Later phases are scaffolded
-with a README describing their contract, not implemented yet.
+This repository currently implements through Phase 5:
+`CascadeRegistry` (Phase 1–2), `ExecutionRegistry` (Phase 3),
+`AttributionSettlement` (Phase 4), and the relayer (Phase 5, see
+`docs/relayer.md`). Later phases are scaffolded with a README describing
+their contract, not implemented yet.
 
 ## Repository layout
 
 ```
 contracts/   Solidity protocol contracts (Hardhat project)
 wrapper/     Phase 7 — Cascade-authored attested serving wrapper (reference impl)
-relayer/     Phase 5 — permissionless usage-proof submission service
+relayer/     Phase 5 — permissionless usage-proof submission service (implemented — see docs/relayer.md)
 sdk/         Phase 8 — TypeScript client for registration, proofs, claims
 indexer/     Phase 9 — off-chain DAG resolution / settlement builder
 web/         Phase 10 — minimal demonstration frontend

@@ -14,8 +14,9 @@ Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
 
-Phase 0 (architecture lock) and Phase 1–2 (`CascadeRegistry` with its
-built-in challenge/finalization mechanism) are in progress. See
+Phases 0–5 are implemented and tested: `CascadeRegistry` (Phase 1–2),
+`ExecutionRegistry` (Phase 3), `AttributionSettlement` (Phase 4), and the
+relayer (Phase 5 — see [`docs/relayer.md`](docs/relayer.md)). See
 `docs/architecture.md` for the full build order and what's implemented so
 far.
 
