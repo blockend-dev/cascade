@@ -14,7 +14,7 @@ Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
 
-Phase 0 (architecture lock) and Phase 1–2 (`LineageRegistry` with its
+Phase 0 (architecture lock) and Phase 1–2 (`CascadeRegistry` with its
 built-in challenge/finalization mechanism) are in progress. See
 `docs/architecture.md` for the full build order and what's implemented so
 far.

@@ -22,7 +22,7 @@ unaddressed silently.
 ## Assets
 
 - Attribution fee balances held by `AttributionSettlement`, pending claim.
-- Registration and challenge stakes held by `LineageRegistry`.
+- Registration and challenge stakes held by `CascadeRegistry`.
 - The integrity of the lineage graph itself (who is whose ancestor, at what
   royalty share, at what confidence level).
 
@@ -40,7 +40,7 @@ unaddressed silently.
 | 8 | Cross-user attribution | **Limited impact by design.** Misattributed usage does not redirect the underlying fee; the user's own payment authorization is separately signed. |
 | 9 | Malicious relayer | **Bounded to delay/censorship only.** Cannot fabricate, redirect, or determine attribution — payout recipients are derived from the on-chain lineage graph, never relayer input. Permissionless resubmission by any other relayer restores liveness. |
 | 10 | Duplicate settlement | **Prevented.** Epoch + usage-proof-identifier keyed replay protection. |
-| 11 | Recipient substitution | **Prevented.** Recipients are computed from `LineageRegistry` state, never accepted as relayer input. |
+| 11 | Recipient substitution | **Prevented.** Recipients are computed from `CascadeRegistry` state, never accepted as relayer input. |
 | 12 | Lineage cycle | **Prevented.** Bounded ancestor walk at edge-registration time (see `MAX_DEPTH` in `docs/security-invariants.md`); a would-be cycle is rejected before it can be registered. |
 | 13 | Extremely deep lineage | **Bounded, not prevented.** Hard-capped `MAX_DEPTH`. Ancestors beyond the cap simply receive no credit — a disclosed limitation, not a silent failure. |
 | 14 | Malicious ancestry split (royalty bps gaming) | **Prevented.** Sum of an edge's declared bps is checked against a hard cap at registration; a child's total upstream allocation cannot exceed `MAX_TOTAL_BPS`. |

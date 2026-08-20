@@ -24,7 +24,7 @@ claim at all — it's a statement about one served response, at one moment.
 same ordering, same import — but it is applied along **two independent
 axes** that Phase 4 will later combine:
 
-1. **Lineage confidence** (unchanged, `LineageRegistry`): how strongly a
+1. **Lineage confidence** (unchanged, `CascadeRegistry`): how strongly a
    parent→child derivation claim is backed. Can be any of the three values.
 2. **Serving confidence** (new, `ExecutionRegistry`): how strongly a specific
    `UsageProof` establishes that the model actually served matches its

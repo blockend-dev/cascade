@@ -1,7 +1,7 @@
 # Cascade — Security Invariants
 
 Numbered so tests can reference them directly by ID. Each one is either
-enforced in `LineageRegistry`/`AttributionSettlement` code, or explicitly
+enforced in `CascadeRegistry`/`AttributionSettlement` code, or explicitly
 marked as an economic (not cryptographic) property.
 
 ## Lineage invariants
@@ -59,7 +59,7 @@ marked as an economic (not cryptographic) property.
   that epoch. Dust from integer division accumulates to a disclosed pool,
   never silently vanishes and never silently over-allocates.
 - **INV-15 (recipient derivation).** A claimable balance's recipient address
-  is always computed from `LineageRegistry` state at settlement time, never
+  is always computed from `CascadeRegistry` state at settlement time, never
   accepted as a raw parameter from whoever submits the settlement
   transaction.
 - **INV-16 (pull payment only).** `AttributionSettlement` never pushes funds

@@ -44,13 +44,13 @@ resolution rule.
                           │
               ┌───────────┴───────────┐
               │                       │
-        LineageRegistry         (Level 2 / Level 1
+        CascadeRegistry         (Level 2 / Level 1
         (Phase 1–2)              evidence attached
               │                  to an edge as it's
               │                  registered)
               ▼
         Challenge window
-        (inside LineageRegistry)
+        (inside CascadeRegistry)
               │
               ▼
         Finalized lineage edge
@@ -99,7 +99,7 @@ model, the trust model, the protocol spec, the security invariants, and the
 ADRs recording the decisions the prior research left open.
 
 Phases 1–10 follow the order in `docs/adr/0002-repo-layout-and-tooling.md`.
-This repository currently implements through Phase 2 (LineageRegistry with
+This repository currently implements through Phase 2 (CascadeRegistry with
 its built-in challenge/finalization mechanism). Later phases are scaffolded
 with a README describing their contract, not implemented yet.
 

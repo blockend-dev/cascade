@@ -56,7 +56,7 @@ schemes silently drift apart.
 UsageProof
  ├── modelId           bytes32   which registered Cascade model this usage is attributed to
  ├── modelCommitment   bytes32   what the signer claims was served — cross-checked
- │                                against LineageRegistry's registered commitment;
+ │                                against CascadeRegistry's registered commitment;
  │                                a mismatch reverts, it does not merely downgrade
  │                                confidence
  ├── requestHash       bytes32   from the 0G TEE-signed payload
@@ -103,7 +103,7 @@ never trusts the submitter's transcription of any of it. See §4 and §6.
 `ConfidenceLevel` is reused across two independent axes, not duplicated and
 not collapsed into one meaning:
 
-- **Lineage confidence** (`LineageRegistry`, unchanged): how strongly a
+- **Lineage confidence** (`CascadeRegistry`, unchanged): how strongly a
   parent→child derivation claim is backed. Any of the three levels.
 - **Serving confidence** (`ExecutionRegistry`, new): how strongly one
   specific `UsageProof` establishes that the model actually served matches
@@ -128,7 +128,7 @@ signed under one domain:
 name:              "Cascade"
 version:           "1"
 chainId:           <0G chain id>
-verifyingContract: <LineageRegistry or AttributionSettlement address>
+verifyingContract: <CascadeRegistry or AttributionSettlement address>
 ```
 
 Binding `chainId` and `verifyingContract` into the domain separator closes
@@ -138,7 +138,7 @@ guarantee, not a Cascade-specific one).
 ## 3. Lineage is a DAG; resolution is per-edge, weakest-link
 
 A model may declare multiple parents (fine-tune merges, multi-source
-distillation). `LineageRegistry` stores edges, not trees. Two rules keep
+distillation). `CascadeRegistry` stores edges, not trees. Two rules keep
 this tractable:
 
 - **No cycles.** At registration, a bounded ancestor walk (see
@@ -211,7 +211,7 @@ from Cascade's trust model entirely — it was never Cascade's to inherit.
    directly to `consumeUsageProof` (to settle).
 4. `ExecutionRegistry` recovers the signer via ECDSA, looks up
    `providerOfSigner[signer]` — this is where "provider" comes from; it was
-   never in the calldata. It calls `LineageRegistry.getModel(modelId)` and
+   never in the calldata. It calls `CascadeRegistry.getModel(modelId)` and
    reverts if the returned `modelCommitment` doesn't match what was signed.
    It computes `executionId` and reverts if already consumed.
 5. The call returns a `VerifiedUsage`: `{ signer, provider, modelId,
@@ -220,7 +220,7 @@ from Cascade's trust model entirely — it was never Cascade's to inherit.
    contract state — none of it is an echo of attacker-controlled calldata.
 6. **Not yet built:** Phase 4's `AttributionSettlement` will take a batch of
    `VerifiedUsage` results per epoch, resolve each `modelId`'s finalized
-   lineage DAG in `LineageRegistry`, and credit ancestors proportionally,
+   lineage DAG in `CascadeRegistry`, and credit ancestors proportionally,
    at a trust level of `min(servingConfidence, weakest finalized edge along
    the path)` — see ADR 0006. This step does not exist in the codebase yet;
    it is described here only so the boundary Phase 3 hands off is legible
