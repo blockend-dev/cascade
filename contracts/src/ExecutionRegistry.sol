@@ -9,7 +9,7 @@ import {CascadeRegistry} from "./CascadeRegistry.sol";
 /// @title ExecutionRegistry
 /// @notice Registers provider signers and verifies canonical UsageProof
 ///         evidence — the cryptographic boundary between 0G's execution
-///         evidence and Cascade's (not-yet-built) AttributionSettlement.
+///         evidence and Cascade's AttributionSettlement.
 ///
 /// @dev What this contract establishes, precisely, and nothing more:
 ///
