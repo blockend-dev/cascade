@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
-// See contracts/test/LineageRegistry.test.ts — typechain isn't wired up
+// See contracts/test/CascadeRegistry.test.ts — typechain isn't wired up
 // reliably in this environment (docs/adr/0002); `any` stands in for
 // generated contract types throughout this file.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,22 +57,22 @@ async function deployFixture() {
   const [owner, resolver, modelOwner, providerA, providerB, signerA, signerB, relayer, stranger] =
     await ethers.getSigners();
 
-  const LineageFactory = await ethers.getContractFactory("LineageRegistry");
-  const lineageRegistry: AnyContract = await LineageFactory.deploy(resolver.address);
-  await lineageRegistry.waitForDeployment();
+  const CascadeFactory = await ethers.getContractFactory("CascadeRegistry");
+  const cascadeRegistry: AnyContract = await CascadeFactory.deploy(resolver.address);
+  await cascadeRegistry.waitForDeployment();
 
   const ExecFactory = await ethers.getContractFactory("ExecutionRegistry");
-  const execRegistry: AnyContract = await ExecFactory.deploy(await lineageRegistry.getAddress());
+  const execRegistry: AnyContract = await ExecFactory.deploy(await cascadeRegistry.getAddress());
   await execRegistry.waitForDeployment();
 
   const modelCommitment = randomHash();
   const salt = ethers.randomBytes(32);
-  const tx = await lineageRegistry.connect(modelOwner).registerModel(modelCommitment, "0g-storage://manifest", salt);
+  const tx = await cascadeRegistry.connect(modelOwner).registerModel(modelCommitment, "0g-storage://manifest", salt);
   const receipt = await tx.wait();
   const event = receipt!.logs
     .map((l: any) => {
       try {
-        return lineageRegistry.interface.parseLog(l);
+        return cascadeRegistry.interface.parseLog(l);
       } catch {
         return null;
       }
@@ -83,7 +83,7 @@ async function deployFixture() {
   await execRegistry.connect(providerA).registerSigner(signerA.address);
 
   return {
-    lineageRegistry,
+    cascadeRegistry,
     execRegistry,
     owner,
     resolver,
@@ -407,12 +407,12 @@ describe("ExecutionRegistry", () => {
     });
 
     it("rejects a proof signed for a different ExecutionRegistry deployment", async () => {
-      const { execRegistry, lineageRegistry, signerA, providerA, modelId, modelCommitment } = await loadFixture(
+      const { execRegistry, cascadeRegistry, signerA, providerA, modelId, modelCommitment } = await loadFixture(
         deployFixture
       );
 
       const ExecFactory = await ethers.getContractFactory("ExecutionRegistry");
-      const secondRegistry: AnyContract = await ExecFactory.deploy(await lineageRegistry.getAddress());
+      const secondRegistry: AnyContract = await ExecFactory.deploy(await cascadeRegistry.getAddress());
       await secondRegistry.waitForDeployment();
       await secondRegistry.connect(providerA).registerSigner(signerA.address); // registered on both, isolates domain as the cause
 

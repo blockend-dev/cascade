@@ -4,12 +4,12 @@ import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
 // Typechain codegen isn't wired up reliably in this environment (see
 // docs/adr/0002-repo-layout-and-tooling.md) — using `any` for the deployed
-// contract instance rather than a generated LineageRegistry interface.
+// contract instance rather than a generated CascadeRegistry interface.
 // ethers' runtime Proxy resolves method calls regardless; this only
 // affects compile-time autocomplete/checking. Revisit if typechain output
 // becomes available.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LineageRegistry = any;
+type CascadeRegistry = any;
 
 const ONE_ETH = ethers.parseEther("1");
 const MIN_STAKE = ethers.parseEther("0.01");
@@ -30,14 +30,14 @@ enum EdgeStatus {
 
 async function deployFixture() {
   const [owner, resolver, alice, bob, carol, challenger, stranger] = await ethers.getSigners();
-  const Factory = await ethers.getContractFactory("LineageRegistry");
-  const registry = (await Factory.deploy(resolver.address)) as unknown as LineageRegistry;
+  const Factory = await ethers.getContractFactory("CascadeRegistry");
+  const registry = (await Factory.deploy(resolver.address)) as unknown as CascadeRegistry;
   await registry.waitForDeployment();
   return { registry, owner, resolver, alice, bob, carol, challenger, stranger };
 }
 
 async function registerModel(
-  registry: LineageRegistry,
+  registry: CascadeRegistry,
   signer: any,
   commitment = ethers.keccak256(ethers.toUtf8Bytes("model-artifact")),
   uri = "0g-storage://manifest",
@@ -57,7 +57,7 @@ async function registerModel(
   return event!.args.modelId as string;
 }
 
-describe("LineageRegistry", () => {
+describe("CascadeRegistry", () => {
   describe("model registration", () => {
     it("registers a model with a distinct modelId per owner+salt", async () => {
       const { registry, alice } = await loadFixture(deployFixture);

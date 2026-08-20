@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {LineageRegistry} from "./LineageRegistry.sol";
+import {CascadeRegistry} from "./CascadeRegistry.sol";
 
 /// @title ExecutionRegistry
 /// @notice Registers provider signers and verifies canonical UsageProof
@@ -16,7 +16,7 @@ import {LineageRegistry} from "./LineageRegistry.sol";
 ///      1. "This EIP-712-typed proof was signed by a key registered to
 ///         provider P" — a real, on-chain-checked ECDSA binding.
 ///      2. "The proof's claimed model commitment matches what's registered
-///         for modelId in LineageRegistry" — a real, on-chain-checked
+///         for modelId in CascadeRegistry" — a real, on-chain-checked
 ///         equality, or the call reverts.
 ///      3. "This specific execution has not been consumed before" —
 ///         real, on-chain replay protection.
@@ -65,7 +65,7 @@ contract ExecutionRegistry is Ownable, EIP712 {
         bytes32 executionId;
         bytes32 requestHash;
         bytes32 responseHash;
-        LineageRegistry.ConfidenceLevel servingConfidence;
+        CascadeRegistry.ConfidenceLevel servingConfidence;
     }
 
     // ---------------------------------------------------------------------
@@ -76,7 +76,7 @@ contract ExecutionRegistry is Ownable, EIP712 {
         "UsageProof(bytes32 modelId,bytes32 modelCommitment,bytes32 requestHash,bytes32 responseHash,bytes32 chatId,uint64 epoch,uint64 issuedAt)"
     );
 
-    LineageRegistry public immutable lineageRegistry;
+    CascadeRegistry public immutable cascadeRegistry;
 
     /// @notice How long after `issuedAt` a proof remains acceptable. Defense
     ///         in depth against very stale submissions — NOT the replay
@@ -119,12 +119,12 @@ contract ExecutionRegistry is Ownable, EIP712 {
     // Constructor
     // ---------------------------------------------------------------------
 
-    constructor(address lineageRegistryAddress)
+    constructor(address cascadeRegistryAddress)
         Ownable(msg.sender)
         EIP712("Cascade", "1")
     {
-        if (lineageRegistryAddress == address(0)) revert ZeroAddress();
-        lineageRegistry = LineageRegistry(lineageRegistryAddress);
+        if (cascadeRegistryAddress == address(0)) revert ZeroAddress();
+        cascadeRegistry = CascadeRegistry(cascadeRegistryAddress);
     }
 
     // ---------------------------------------------------------------------
@@ -251,12 +251,12 @@ contract ExecutionRegistry is Ownable, EIP712 {
         address provider = providerOfSigner[signer];
         if (provider == address(0)) revert UnregisteredSigner();
 
-        LineageRegistry.Model memory model = lineageRegistry.getModel(proof.modelId);
+        CascadeRegistry.Model memory model = cascadeRegistry.getModel(proof.modelId);
         if (model.modelCommitment != proof.modelCommitment) revert ModelCommitmentMismatch();
 
-        LineageRegistry.ConfidenceLevel servingConfidence = (providerMode[provider] == ProviderMode.CascadeWrapper)
-            ? LineageRegistry.ConfidenceLevel.CryptographicallyBound
-            : LineageRegistry.ConfidenceLevel.Declared;
+        CascadeRegistry.ConfidenceLevel servingConfidence = (providerMode[provider] == ProviderMode.CascadeWrapper)
+            ? CascadeRegistry.ConfidenceLevel.CryptographicallyBound
+            : CascadeRegistry.ConfidenceLevel.Declared;
 
         bytes32 executionId = hashExecutionId(provider, proof.modelId, proof.requestHash, proof.responseHash);
 

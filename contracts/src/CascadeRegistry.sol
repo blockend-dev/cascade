@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/// @title LineageRegistry
+/// @title CascadeRegistry
 /// @notice Registers AI models and their claimed lineage edges, and adjudicates
 ///         challenges to those claims.
 ///
@@ -18,7 +18,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///      Enforces INV-1 through INV-11 from docs/security-invariants.md.
 ///      Challenge/finalization lives here rather than a separate contract —
 ///      see docs/adr/0004-challenge-mechanism-in-lineage-registry.md.
-contract LineageRegistry is Ownable, ReentrancyGuard {
+contract CascadeRegistry is Ownable, ReentrancyGuard {
     // ---------------------------------------------------------------------
     // Types
     // ---------------------------------------------------------------------
