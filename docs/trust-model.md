@@ -14,7 +14,8 @@ gets a weaker word than "proof," "trustless," or "guaranteed."
 | 0G provider (non-wrapper) | Execution only, **not** model identity | Can serve a different model than declared, undetected, at Level 2/3 |
 | 0G provider running the Cascade wrapper | Execution **and** model identity, insofar as the measured wrapper is correct | Attestation fails closed — cannot silently swap models |
 | 0G Compute/Serving settlement contract | Unknown — source not publicly located (see ADR 0003) | Unknown; Cascade does not depend on it, so this cannot propagate into Cascade's own guarantees |
-| Cascade `LineageRegistry` / `AttributionSettlement` | Arithmetic and state-transition correctness (open source, audited) | Standard smart-contract risk — a bug could misroute funds, mitigated by audit and the invariants in `docs/security-invariants.md`, not by this document |
+| Cascade `LineageRegistry` / `ExecutionRegistry` / `AttributionSettlement` | Arithmetic and state-transition correctness (open source, audited) | Standard smart-contract risk — a bug could misroute funds, mitigated by audit and the invariants in `docs/security-invariants.md`, not by this document |
+| Cascade `ExecutionRegistry`'s `CascadeWrapper` provider-mode flag | **Not cryptographically backed today.** Owner-attested placeholder — see ADR 0006. | A malicious or mistaken owner attestation would make a `Declared`-strength usage proof read as `CryptographicallyBound`. This is why the flag must never be described publicly as "Level 1" until Phase 7 replaces it with a real check. |
 | Cascade relayer | **Liveness only.** Never a source of truth. | Delay or censorship, never fabrication, redirection, or theft (any other relayer can resubmit) |
 | Model owner | Untrusted by default | Can attempt false claims — checked by stake + challenge (Level 3) or by the wrapper (Level 1) |
 | Lineage claimant | Untrusted by default | Same as above |
