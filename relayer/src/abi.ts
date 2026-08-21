@@ -42,6 +42,13 @@ export const ATTRIBUTION_SETTLEMENT_ABI = [
   "error ZeroAddress()",
 ] as const;
 
+// CascadeRegistry.getModel returns a single `Model memory` struct — one
+// tuple, not five flat return values; a flat-returns ABI fragment encodes
+// differently on the wire and fails to decode even though it type-checks.
+// Currently unused in this package (the relayer only talks to
+// ExecutionRegistry directly), fixed anyway rather than left as a
+// landmine for whenever it is used — see wrapper/src/abi.ts, where the
+// same bug was live and caught by contracts/test/wrapper's tests.
 export const CASCADE_REGISTRY_ABI = [
-  "function getModel(bytes32 modelId) view returns (address owner, bytes32 modelCommitment, string metadataURI, uint8 status, uint64 createdAt)",
+  "function getModel(bytes32 modelId) view returns (tuple(address owner, bytes32 modelCommitment, string metadataURI, uint8 status, uint64 createdAt))",
 ] as const;
