@@ -99,11 +99,12 @@ model, the trust model, the protocol spec, the security invariants, and the
 ADRs recording the decisions the prior research left open.
 
 Phases 1–10 follow the order in `docs/adr/0002-repo-layout-and-tooling.md`.
-This repository currently implements through Phase 5:
+This repository currently implements through Phase 6:
 `CascadeRegistry` (Phase 1–2), `ExecutionRegistry` (Phase 3),
-`AttributionSettlement` (Phase 4), and the relayer (Phase 5, see
-`docs/relayer.md`). Later phases are scaffolded with a README describing
-their contract, not implemented yet.
+`AttributionSettlement` (Phase 4), the relayer (Phase 5, see
+`docs/relayer.md`), and `TrainingProvenanceRegistry` (Phase 6, see
+`docs/protocol-spec.md` §7 and ADR 0010). Later phases are scaffolded with
+a README describing their contract, not implemented yet.
 
 ## Repository layout
 

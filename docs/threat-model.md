@@ -25,6 +25,8 @@ unaddressed silently.
 - Registration and challenge stakes held by `CascadeRegistry`.
 - The integrity of the lineage graph itself (who is whose ancestor, at what
   royalty share, at what confidence level).
+- The integrity of registered `TrainingProvenanceRegistry` records — an
+  immutable, provider-attested claim about how a model was trained.
 
 ## Attack catalogue
 
@@ -61,6 +63,13 @@ unaddressed silently.
 | 29 | Unauthorized model update | **Prevented.** Only the registered owner may update metadata or revoke; ownership transfer is a distinct, logged event. |
 | 30 | Lineage mutation after settlement | **Prevented.** A finalized edge's confidence level and royalty share are immutable; revocation stops future children, never retroactively claws back already-settled royalties. |
 | 31 | Provider refuses to participate in Cascade at all | **Not preventable — stated limitation.** Cascade is opt-in. No cryptographic or economic mechanism forces a non-participating provider to pay attribution fees. |
+| 32 | Forged training provenance (garbage or unregistered-signer signature) | **Prevented.** `registerProvenance` recovers the signer via ECDSA and requires `ExecutionRegistry.providerOfSigner(signer) != address(0)` — the same registered-provider trust anchor `UsageProof` verification uses. |
+| 33 | Provenance claim with a mismatched result/base commitment | **Prevented.** Cross-checked at registration against `CascadeRegistry.getModel(...).modelCommitment`; mismatches revert rather than register. |
+| 34 | Provenance claim tampered post-signing (dataset, script, or any signed field) | **Prevented.** Every field is part of the EIP-712-signed struct; any modification invalidates the signature, same mechanism as `UsageProof` tamper resistance (#2, #3). |
+| 35 | Unauthorized provenance registration (not the model owner) | **Prevented.** Requires `msg.sender == CascadeRegistry.getModel(childModelId).owner`. |
+| 36 | Provenance replay / mutation after registration | **Prevented.** One record per `childModelId`, ever — no update function exists; a second registration attempt (even with "corrected" values) reverts. |
+| 37 | Provenance cross-chain / cross-contract replay | **Prevented.** EIP-712 domain separator binds `chainId` and `verifyingContract` — identical mechanism to `UsageProof` (#24, #25). |
+| 38 | Representing a Level 2 (training-provenance) claim as Level 1 (cryptographically bound) | **Structurally prevented, not policy-prevented.** `CascadeRegistry` doesn't distinguish the source of an edge's `evidenceHash`, so nothing stops the label from being applied — but `servingConfidence` (the only source of Level 1 status) lives entirely in `ExecutionRegistry` with no dependency on `CascadeRegistry` lineage labels, so the mislabeling cannot raise `min(lineage, serving)` above whatever `servingConfidence` actually is. See ADR 0006, ADR 0010. |
 
 ## Explicit non-goals (out of scope, by design)
 

@@ -333,3 +333,78 @@ settles according to whatever `ExecutionRegistry` already established for
 that proof (§4a) — no stronger, no weaker. In particular, it does not
 verify a 0G TEE quote, and it has no integration with 0G's own settlement
 contract (ADR 0003) — the two payment systems remain fully parallel.
+
+## 7. TrainingProvenanceRegistry (implemented Phase 6)
+
+Structured on-chain representation of a Level 2 claim — see ADR 0010 for
+the full architecture reasoning; this section is the data-model reference.
+
+### What a registered `TrainingProvenance` record contains
+
+```
+TrainingProvenance
+ ├── baseModelId       bytes32   the declared base model — a registered CascadeRegistry modelId
+ ├── baseModelHash     bytes32   claimed base weight commitment — cross-checked against
+ │                                 CascadeRegistry.getModel(baseModelId).modelCommitment at
+ │                                 registration; mismatch reverts
+ ├── datasetRootHash   bytes32   0G Storage root hash of the training dataset
+ ├── scriptHash        bytes32   training script / config hash
+ ├── resultRootHash    bytes32   claimed resulting weight commitment — cross-checked against
+ │                                 CascadeRegistry.getModel(childModelId).modelCommitment;
+ │                                 mismatch reverts
+ ├── taskId            bytes32   opaque 0G fine-tuning task identifier
+ ├── evidenceURI       string    pointer to the full off-chain manifest (0G Storage) — the
+ │                                 detailed evidence itself is never stored on-chain
+ ├── provider          address   derived from the registered ExecutionRegistry signer who
+ │                                 signed the claim — never a signed field itself
+ ├── registrant        address   the child model's owner, who submitted the transaction
+ ├── issuedAt          uint64    provider-signed claim time
+ └── registeredAt      uint64    on-chain registration time
+```
+
+### Dual authorization
+
+`registerProvenance` requires both: `msg.sender == CascadeRegistry.getModel(childModelId).owner`
+(the same ownership pattern `registerLineageEdge` already uses), and an
+EIP-712 signature over the claim from a signer registered in
+`ExecutionRegistry.providerOfSigner` (the same trust anchor `UsageProof`
+verification already uses). Neither alone authorizes a registration.
+
+### What this proves, and what it does not
+
+A registered record proves: a specific, identifiable 0G provider
+non-repudiably signed a claim naming these exact base/dataset/script/result
+values, and those base/result commitments match what's independently
+registered in `CascadeRegistry`. It does not prove the provider's training
+job actually produced the declared output from the declared inputs — that
+atomic binding has no public confirmation in 0G's fine-tuning
+implementation (prior research: *The Cascade Gate*, *The Cascade Verdict*)
+and this registry does not claim otherwise anywhere. This is exactly
+Level 2's scope as defined in §5 — circumstantial, accountable evidence,
+never described as proof of derivation.
+
+### The bridge to CascadeRegistry — a convention, not an enforced link
+
+`CascadeRegistry.registerLineageEdge` is unmodified and has no knowledge
+of this contract. The connection is a hashing convention:
+`evidenceHashOf(childModelId)` returns the same EIP-712 struct hash
+(`hashClaim`) that should be passed as a Level 2 edge's `evidenceHash`.
+Nothing on-chain enforces that pairing — anyone (an indexer, a challenger,
+a UI) can call `matchesEdge` to check it independently. A mismatched or
+fabricated pairing is a false Level 2 claim, challengeable through
+`CascadeRegistry`'s existing stake-and-challenge mechanism exactly as a
+false Level 3 claim would be. See ADR 0010 for why this indirection was
+chosen over a direct on-chain call between the two contracts.
+
+### Why mislabeling Level 2 as Level 1 doesn't work
+
+Nothing stops a caller from registering a `CascadeRegistry` edge with
+`ConfidenceLevel.CryptographicallyBound` while backing it with a
+Level-2-sourced `evidenceHash` — `CascadeRegistry` doesn't know the
+difference. But `AttributionSettlement`'s effective trust is
+`min(lineage confidence, serving confidence)` (§6, ADR 0006), and
+`servingConfidence` lives entirely in `ExecutionRegistry`, with zero
+dependency on any `CascadeRegistry` lineage-edge label. A mislabeled edge
+cannot raise the settlement layer's actual trust level above whatever
+`servingConfidence` independently is. Verified directly, not just argued
+for, in `contracts/test/TrainingProvenanceRegistry.test.ts`.

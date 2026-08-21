@@ -95,6 +95,36 @@ marked as an economic (not cryptographic) property.
   exactly. See ADR 0008 — the amount is never relayer- or
   submitter-supplied, by construction, not by convention.
 
+## Training provenance invariants (Phase 6, `TrainingProvenanceRegistry`)
+
+- **INV-22 (immutability).** A `TrainingProvenance` record, once
+  registered for a `childModelId`, can never be updated or replaced — no
+  update function exists. A second `registerProvenance` call for the same
+  `childModelId` always reverts, including with corrected/different
+  values.
+- **INV-23 (dual authorization).** Registration requires both
+  `msg.sender == CascadeRegistry.getModel(childModelId).owner` and an
+  EIP-712 signature from a signer registered in
+  `ExecutionRegistry.providerOfSigner`. Neither condition alone is
+  sufficient — see ADR 0010.
+- **INV-24 (commitment cross-check).** A claim's `resultRootHash` must
+  equal the child model's registered `modelCommitment`, and its
+  `baseModelHash` must equal the base model's registered
+  `modelCommitment`, both checked at registration time. Mismatches revert
+  (`ResultCommitmentMismatch`, `BaseModelCommitmentMismatch`) rather than
+  registering a claim that contradicts already-registered state.
+- **INV-25 (no enforced link to CascadeRegistry).** `CascadeRegistry` does
+  not call into `TrainingProvenanceRegistry` and is not modified by its
+  existence. The evidence-hash pairing between a Level 2 lineage edge and
+  a provenance record is a checkable convention, not an on-chain-enforced
+  invariant — see ADR 0010 and `docs/protocol-spec.md` §7.
+- **INV-26 (axis independence preserved).** No code path in
+  `TrainingProvenanceRegistry` can affect `ExecutionRegistry`'s
+  `servingConfidence` computation. Level 2 evidence cannot become Level 1
+  by construction, not by policy — proven directly in
+  `contracts/test/TrainingProvenanceRegistry.test.ts`, consistent with
+  INV-6's weakest-link rule and ADR 0006.
+
 ## Explicitly economic, not cryptographic
 
 INV-6 through INV-11 bound *behavior* through stake and bonds; they do not
