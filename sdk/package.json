@@ -1,0 +1,21 @@
+{
+  "name": "@cascade/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript SDK for Cascade — thin, typed wrappers around CascadeRegistry, ExecutionRegistry, AttributionSettlement, and TrainingProvenanceRegistry. Wraps protocol logic; never reimplements it.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate-abis": "ts-node scripts/generate-abis.ts",
+    "build": "tsc",
+    "dev": "ts-node"
+  },
+  "dependencies": {
+    "ethers": "^6.13.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.14.2"
+  }
+}
