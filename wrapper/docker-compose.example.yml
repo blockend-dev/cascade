@@ -1,0 +1,35 @@
+# Illustrative only — not a tested, working 0G deployment. This
+# environment has no access to real 0G testnet infrastructure or
+# TDX/H100 hardware to actually run this against (ADR 0011). It documents
+# the composition confirmed from docs.0g.ai's Inference Provider Setup
+# guide: the provider's own model service (this repo) composed alongside
+# 0G's own Inference Broker, both launched together inside a TEE node set
+# up via Dstack or an equivalent path. The broker image/tag and its exact
+# configuration are 0G's own release artifacts — fill in from 0G's actual
+# provider setup guide at deployment time, not invented here.
+
+services:
+  cascade-wrapper:
+    build: .
+    image: cascade-wrapper:local
+    environment:
+      RPC_URL: ${RPC_URL}
+      CASCADE_REGISTRY_ADDRESS: ${CASCADE_REGISTRY_ADDRESS}
+      MODEL_ID: ${MODEL_ID}
+      STORAGE_INDEXER_URL: ${STORAGE_INDEXER_URL}
+      HTTP_PORT: "8090"
+    expose:
+      - "8090"
+
+  # 0G's own Inference Broker — downloaded from 0G's releases per the
+  # confirmed provider setup flow, not built by this repository. Handles
+  # TEE-signed attestation, request routing, and payment; proxies to
+  # cascade-wrapper's OpenAI-compatible endpoint above. Placeholder
+  # service definition — the real image reference and configuration come
+  # from 0G's own provider setup tooling (`./config`), not from this file.
+  inference-broker:
+    image: "<0g-inference-broker-image>" # from 0G's releases — not this repo's to pin
+    depends_on:
+      - cascade-wrapper
+    ports:
+      - "443:443"
