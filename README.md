@@ -14,13 +14,15 @@ Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
 
-Phases 0–7 are implemented and tested: `CascadeRegistry` (Phase 1–2),
+Phases 0–8 are implemented and tested: `CascadeRegistry` (Phase 1–2),
 `ExecutionRegistry` (Phase 3), `AttributionSettlement` (Phase 4), the
 relayer (Phase 5 — see [`docs/relayer.md`](docs/relayer.md)),
 `TrainingProvenanceRegistry` (Phase 6 — Level 2 attested-training
-provenance), and the serving wrapper (Phase 7 — Level 1, see
-[`wrapper/README.md`](wrapper/README.md)). See `docs/architecture.md` for
-the full build order and what's implemented so far.
+provenance), the serving wrapper (Phase 7 — Level 1, see
+[`wrapper/README.md`](wrapper/README.md)), and the TypeScript SDK
+(Phase 8, see [`sdk/README.md`](sdk/README.md)). See
+`docs/architecture.md` for the full build order and what's implemented
+so far.
 
 ## Layout
 
@@ -30,7 +32,7 @@ the full build order and what's implemented so far.
 | `contracts/` | Solidity protocol contracts (Hardhat) |
 | `wrapper/` | Cascade-authored attested serving wrapper (Level 1) |
 | `relayer/` | Permissionless usage-proof submission service |
-| `sdk/` | TypeScript client |
+| `sdk/` | TypeScript client (implemented — see `sdk/README.md`) |
 | `indexer/` | Off-chain DAG resolution / settlement builder |
 | `web/` | Minimal demonstration frontend |
 | `tests/` | Cross-component integration tests |

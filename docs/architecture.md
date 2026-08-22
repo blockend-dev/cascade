@@ -99,13 +99,15 @@ model, the trust model, the protocol spec, the security invariants, and the
 ADRs recording the decisions the prior research left open.
 
 Phases 1–10 follow the order in `docs/adr/0002-repo-layout-and-tooling.md`.
-This repository currently implements through Phase 7:
+This repository currently implements through Phase 8:
 `CascadeRegistry` (Phase 1–2), `ExecutionRegistry` (Phase 3),
 `AttributionSettlement` (Phase 4), the relayer (Phase 5, see
 `docs/relayer.md`), `TrainingProvenanceRegistry` (Phase 6, see
-`docs/protocol-spec.md` §7 and ADR 0010), and the serving wrapper
-(Phase 7, see `docs/protocol-spec.md` §8 and ADR 0011). Later phases are
-scaffolded with a README describing their contract, not implemented yet.
+`docs/protocol-spec.md` §7 and ADR 0010), the serving wrapper
+(Phase 7, see `docs/protocol-spec.md` §8 and ADR 0011), and the
+TypeScript SDK (Phase 8, see `sdk/README.md` and ADR 0012). Later
+phases are scaffolded with a README describing their contract, not
+implemented yet.
 
 ## Repository layout
 
@@ -113,7 +115,7 @@ scaffolded with a README describing their contract, not implemented yet.
 contracts/   Solidity protocol contracts (Hardhat project)
 wrapper/     Phase 7 — Cascade-authored attested serving wrapper (implemented — see wrapper/README.md)
 relayer/     Phase 5 — permissionless usage-proof submission service (implemented — see docs/relayer.md)
-sdk/         Phase 8 — TypeScript client for registration, proofs, claims
+sdk/         Phase 8 — TypeScript client for registration, proofs, claims (implemented — see sdk/README.md)
 indexer/     Phase 9 — off-chain DAG resolution / settlement builder
 web/         Phase 10 — minimal demonstration frontend
 tests/       cross-component integration tests (contracts keep their own
