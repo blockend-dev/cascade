@@ -408,3 +408,43 @@ dependency on any `CascadeRegistry` lineage-edge label. A mislabeled edge
 cannot raise the settlement layer's actual trust level above whatever
 `servingConfidence` independently is. Verified directly, not just argued
 for, in `contracts/test/TrainingProvenanceRegistry.test.ts`.
+
+## 8. The wrapper (implemented Phase 7)
+
+Deployability was confirmed from primary sources before any code was
+written — see ADR 0011 for the full research. In short:
+`docs.0g.ai`'s own Inference Provider Setup guide requires a provider to
+supply their own OpenAI-API-compatible "model service," composed via
+docker-compose alongside 0G's own Inference Broker, with no documented
+approval or whitelisting step; this is independently corroborated by
+Dstack (one of the two documented deployment paths), a third-party,
+audited framework whose own stated purpose is "bring your Docker
+containers as-is" into a TDX-attested confidential VM.
+
+`wrapper/` is that model service. Its entire job (`wrapper/src/lifecycle.ts`):
+read `CascadeRegistry.getModel(modelId).modelCommitment` — never a
+separately-configurable value — download exactly that content-addressed
+hash from 0G Storage with `@0gfoundation/0g-storage-ts-sdk`'s own
+Merkle-proof verification enabled (`proof: true`; this codebase does not
+reimplement 0G Storage's chunk/tree hashing itself — see
+`wrapper/src/storage.ts`), and only start serving if that succeeds. TEE
+attestation and signing are 0G's own Inference Broker's responsibility,
+confirmed from the same source — the wrapper does not reimplement them.
+
+**`ExecutionRegistry.setProviderMode` is unchanged.** It remains
+owner-gated, exactly as Phase 3 left it, and full on-chain TDX/NVIDIA
+quote verification remains out of scope, unchanged by this phase. What
+Phase 7 actually adds is `wrapper/MEASUREMENT.md` — a documented,
+independently-repeatable procedure for checking whether a provider's live
+attestation matches the wrapper's published, reproducibly-built
+measurement, using the same manual verification tools (`dstack-verifier`,
+`sigstore`) 0G's own documentation already points to. This turns "the
+owner said so" into "the owner's claim is checkable by anyone, and wrong
+if challenged" — still an off-chain-verified, on-chain-registered claim,
+never described as more than that.
+
+**Status, stated plainly**: deployability is confirmed from documentation
+research, not from an actual deployment. No component of this repository
+has been run against live 0G testnet/mainnet infrastructure or real
+TDX/H100 hardware — this environment has access to neither. `docs/trust-model.md`
+reflects this distinction explicitly.

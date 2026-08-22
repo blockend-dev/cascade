@@ -14,12 +14,13 @@ Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
 
-Phases 0–6 are implemented and tested: `CascadeRegistry` (Phase 1–2),
+Phases 0–7 are implemented and tested: `CascadeRegistry` (Phase 1–2),
 `ExecutionRegistry` (Phase 3), `AttributionSettlement` (Phase 4), the
-relayer (Phase 5 — see [`docs/relayer.md`](docs/relayer.md)), and
+relayer (Phase 5 — see [`docs/relayer.md`](docs/relayer.md)),
 `TrainingProvenanceRegistry` (Phase 6 — Level 2 attested-training
-provenance). See `docs/architecture.md` for the full build order and
-what's implemented so far.
+provenance), and the serving wrapper (Phase 7 — Level 1, see
+[`wrapper/README.md`](wrapper/README.md)). See `docs/architecture.md` for
+the full build order and what's implemented so far.
 
 ## Layout
 
