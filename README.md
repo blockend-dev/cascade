@@ -14,16 +14,17 @@ Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
 
-Phases 0–9 are implemented and tested: `CascadeRegistry` (Phase 1–2),
+Phases 0–10 are implemented and tested: `CascadeRegistry` (Phase 1–2),
 `ExecutionRegistry` (Phase 3), `AttributionSettlement` (Phase 4), the
 relayer (Phase 5 — see [`docs/relayer.md`](docs/relayer.md)),
 `TrainingProvenanceRegistry` (Phase 6 — Level 2 attested-training
 provenance), the serving wrapper (Phase 7 — Level 1, see
 [`wrapper/README.md`](wrapper/README.md)), the TypeScript SDK
-(Phase 8, see [`sdk/README.md`](sdk/README.md)), and the event indexer
-(Phase 9, see [`docs/indexer.md`](docs/indexer.md)). See
-`docs/architecture.md` for the full build order and what's implemented
-so far.
+(Phase 8, see [`sdk/README.md`](sdk/README.md)), the event indexer
+(Phase 9, see [`docs/indexer.md`](docs/indexer.md)), and the model
+provenance/verification/attribution explorer frontend (Phase 10, see
+[`docs/frontend.md`](docs/frontend.md)). See `docs/architecture.md`
+for the full build order and what's implemented so far.
 
 ## Layout
 
@@ -35,5 +36,5 @@ so far.
 | `relayer/` | Permissionless usage-proof submission service |
 | `sdk/` | TypeScript client (implemented — see `sdk/README.md`) |
 | `indexer/` | Read-only event indexer / query projection (implemented — see `docs/indexer.md`) |
-| `web/` | Minimal demonstration frontend |
+| `web/` | Model provenance/verification/attribution explorer (implemented — see `docs/frontend.md`) |
 | `tests/` | Cross-component integration tests |

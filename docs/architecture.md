@@ -99,16 +99,16 @@ model, the trust model, the protocol spec, the security invariants, and the
 ADRs recording the decisions the prior research left open.
 
 Phases 1–10 follow the order in `docs/adr/0002-repo-layout-and-tooling.md`.
-This repository currently implements through Phase 9:
+This repository currently implements through Phase 10:
 `CascadeRegistry` (Phase 1–2), `ExecutionRegistry` (Phase 3),
 `AttributionSettlement` (Phase 4), the relayer (Phase 5, see
 `docs/relayer.md`), `TrainingProvenanceRegistry` (Phase 6, see
 `docs/protocol-spec.md` §7 and ADR 0010), the serving wrapper
 (Phase 7, see `docs/protocol-spec.md` §8 and ADR 0011), the
-TypeScript SDK (Phase 8, see `sdk/README.md` and ADR 0012), and the
-event indexer (Phase 9, see `docs/indexer.md` and ADR 0013). Later
-phases are scaffolded with a README describing their contract, not
-implemented yet.
+TypeScript SDK (Phase 8, see `sdk/README.md` and ADR 0012), the
+event indexer (Phase 9, see `docs/indexer.md` and ADR 0013), and the
+frontend (Phase 10, see `docs/frontend.md` and ADRs 0014–0015). All
+ten planned phases are now implemented.
 
 ## Repository layout
 
@@ -118,7 +118,7 @@ wrapper/     Phase 7 — Cascade-authored attested serving wrapper (implemented 
 relayer/     Phase 5 — permissionless usage-proof submission service (implemented — see docs/relayer.md)
 sdk/         Phase 8 — TypeScript client for registration, proofs, claims (implemented — see sdk/README.md)
 indexer/     Phase 9 — read-only event indexer / query projection (implemented — see docs/indexer.md)
-web/         Phase 10 — minimal demonstration frontend
+web/         Phase 10 — model provenance/verification/attribution explorer (implemented — see docs/frontend.md)
 tests/       cross-component integration tests (contracts keep their own
              unit/fuzz tests colocated under contracts/test, per Hardhat
              convention — see ADR 0002)
