@@ -151,10 +151,15 @@ this tractable:
   A Level-1 grandparent edge does not strengthen a Level-3 parent edge
   anywhere downstream of it.
 
-Full graph resolution — computing every ancestor's proportional share
-across an arbitrary DAG — happens **off-chain**, in the indexer (Phase 9).
-The chain only ever verifies a compact, already-computed split against
-registered `royaltyBps` values and signs off on the arithmetic. See
+**Superseded by Phase 4 — see §4 below.** This paragraph originally said
+full graph resolution happens off-chain in an indexer that batches a
+compact, pre-computed split for the chain to verify. That indexer was
+never built that way: `AttributionSettlement._distribute` (Phase 4)
+performs the full bounded recursive traversal **on-chain**, reading
+`CascadeRegistry`'s finalized edges directly, one execution at a time.
+Phase 9's indexer (`docs/indexer.md`) is a read-only projection/query
+layer over the results of that on-chain computation — it never computes
+a split the chain then trusts. See
 `docs/security-invariants.md` for the exact conservation invariant this
 must satisfy.
 

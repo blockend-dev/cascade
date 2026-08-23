@@ -24,10 +24,18 @@ marked as an economic (not cryptographic) property.
   prior, already-closed epoch.
 - **INV-6 (weakest-link confidence).** The effective confidence of any
   multi-hop path is `min()` over its edges, never an average, never
-  inherited from a stronger ancestor. Enforced in the off-chain resolver
-  (Phase 9) and asserted by unit tests against hand-constructed DAGs; the
-  on-chain contract stores per-edge confidence and never computes a
-  path-level aggregate itself.
+  inherited from a stronger ancestor. **Superseded by Phase 4 — enforced
+  on-chain, not off-chain.** This originally assumed an off-chain
+  resolver (Phase 9) would compute path-level confidence; Phase 4 built
+  `AttributionSettlement._distribute` to compute
+  `min(edge confidence, serving confidence)` per traversed edge
+  on-chain instead (emitted as `EdgeAttributed.effectiveConfidence`),
+  and `CascadeRegistry.pathConfidence` separately computes the same
+  weakest-link `min()` on-chain for a caller-supplied path. Phase 9's
+  indexer does not recompute this a third time — it stores exactly the
+  `effectiveConfidence` value the contract already computed (see
+  `docs/indexer.md` §3), consistent with the "wrap, don't reimplement"
+  discipline `sdk/`'s ADR 0012 established for the same reason.
 
 ## Challenge invariants
 
