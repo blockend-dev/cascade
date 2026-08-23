@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Minimal, single-job CI: install each package (dependency order —
+# contracts/test/** imports sdk/, relayer/, wrapper/, indexer/, and
+# web/'s source directly, so their node_modules must exist before the
+# contracts test suite runs), typecheck/build every package via its own
+# existing `build` script, run each package's own test script where it
+# has one, and finally run the full contracts test suite, which is what
+# actually exercises every other package's source against real deployed
+# contracts.
+#
+# Runs on a normal Linux GitHub-hosted runner — a real, standard
+# checkout, not this project's own Windows/UNC-path development
+# environment (docs/frontend.md §11). The local UNC workaround
+# (`--ignore-scripts` for wrapper's native-postinstall problem) is kept
+# here too, deliberately: it's needed for wrapper's native dependency
+# regardless of OS/filesystem (its typings don't require the postinstall
+# step to have run — see wrapper/README.md), not a UNC-path-specific
+# hack. No other local workaround (the Vite/esbuild UNC issue) applies
+# to a Linux runner and none is encoded here.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: contracts — install & compile
+        working-directory: contracts
+        run: |
+          npm ci
+          npm run build
+
+      - name: sdk — install & build
+        working-directory: sdk
+        run: |
+          npm ci
+          npm run build
+
+      - name: relayer — install & build
+        working-directory: relayer
+        run: |
+          npm ci
+          npm run build
+
+      - name: wrapper — install & build
+        working-directory: wrapper
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: indexer — install & build
+        working-directory: indexer
+        run: |
+          npm ci
+          npm run build
+
+      - name: web — install, typecheck, build, test
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          npm test
+
+      - name: contracts — full test suite
+        working-directory: contracts
+        run: npm test
