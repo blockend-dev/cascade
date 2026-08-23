@@ -5,7 +5,6 @@ import { LoadingState, ErrorState, EmptyState, Hex, Panel } from "../components/
 import { ConfidenceBadge } from "../components/ConfidenceBadge";
 import { DataFreshness } from "../components/DataFreshness";
 import { Link } from "../router";
-import { ConfidenceLevel } from "../confidence";
 
 const NOT_EMITTED =
   "Not emitted by the protocol event; available only through direct contract verification (the original UsageProof, if you hold it).";
@@ -46,7 +45,7 @@ export function Execution({ executionId }: { executionId: string }) {
           <dt>Serving confidence</dt>
           <dd>
             {execution.servingConfidence !== null ? (
-              <ConfidenceBadge axis="Serving" level={execution.servingConfidence as ConfidenceLevel} />
+              <ConfidenceBadge axis="Serving" level={execution.servingConfidence} />
             ) : (
               "not yet settled"
             )}
@@ -88,7 +87,7 @@ export function Execution({ executionId }: { executionId: string }) {
                       </td>
                       <td>{a.amount.toString()} wei</td>
                       <td>
-                        <ConfidenceBadge axis="Effective" level={a.effectiveConfidence as ConfidenceLevel} compact />
+                        <ConfidenceBadge axis="Effective" level={a.effectiveConfidence} compact />
                       </td>
                     </tr>
                   ))}

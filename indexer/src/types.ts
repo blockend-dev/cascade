@@ -1,10 +1,15 @@
+import { ConfidenceLevel } from "../../sdk/src/types";
+
 /**
  * Canonical event payloads — one shape per event actually emitted by the
  * four Cascade contracts (docs/indexer.md §1). Field sets mirror the
  * event declarations exactly; nothing here adds a field the contract
  * doesn't emit. `bigint`-valued chain fields stay `bigint` at this layer
  * (converted to decimal-string TEXT only at the SQLite boundary — see
- * db.ts / projection.ts).
+ * db.ts / projection.ts). Confidence-valued fields reuse the SDK's
+ * `ConfidenceLevel` enum rather than a plain `number` — the same
+ * canonical type `sdk/` and `web/` already use, so a caller never needs
+ * to assert one on.
  */
 
 export interface EventEnvelope<Name extends string, Payload> {
@@ -44,7 +49,7 @@ export interface LineageEdgeRegisteredPayload {
   edgeId: string;
   childModelId: string;
   parentModelId: string;
-  confidenceLevel: number;
+  confidenceLevel: ConfidenceLevel;
   royaltyBps: number;
   stake: bigint;
 }
@@ -90,7 +95,7 @@ export interface ExecutionSettledPayload {
   provider: string;
   epoch: bigint;
   amount: bigint;
-  servingConfidence: number;
+  servingConfidence: ConfidenceLevel;
 }
 export interface EdgeAttributedPayload {
   executionId: string;
@@ -98,7 +103,7 @@ export interface EdgeAttributedPayload {
   childModelId: string;
   parentModelId: string;
   amount: bigint;
-  effectiveConfidence: number;
+  effectiveConfidence: ConfidenceLevel;
 }
 export interface OwnerCreditedPayload {
   executionId: string;
@@ -173,7 +178,7 @@ export interface EdgeRow {
   edgeId: string;
   childModelId: string;
   parentModelId: string;
-  confidenceLevel: number;
+  confidenceLevel: ConfidenceLevel;
   royaltyBps: number;
   stake: bigint;
   status: EdgeStatus;
@@ -211,7 +216,7 @@ export interface ExecutionRow {
   requestHash: string | null;
   epoch: bigint | null;
   amount: bigint | null;
-  servingConfidence: number | null;
+  servingConfidence: ConfidenceLevel | null;
   consumedAtBlock: number | null;
   settledAtBlock: number | null;
 }
@@ -222,7 +227,7 @@ export interface EdgeAttributionRow {
   childModelId: string;
   parentModelId: string;
   amount: bigint;
-  effectiveConfidence: number;
+  effectiveConfidence: ConfidenceLevel;
 }
 
 export interface OwnerCreditRow {

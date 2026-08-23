@@ -9,7 +9,6 @@ import { fetchLineageSubgraph } from "../lineage/fetchSubgraph";
 import { layoutDag } from "../lineage/layout";
 import { LineageGraph } from "../lineage/LineageGraph";
 import { Link } from "../router";
-import { ConfidenceLevel } from "../confidence";
 import { EdgeActions } from "../components/EdgeActions";
 import { AppConfig } from "../types";
 
@@ -196,7 +195,7 @@ export function ModelDetail({ modelId, config }: { modelId: string; config: AppC
                   <td>{e.provider ? <Hex value={e.provider} /> : "—"}</td>
                   <td>
                     {e.servingConfidence !== null ? (
-                      <ConfidenceBadge axis="Serving" level={e.servingConfidence as ConfidenceLevel} compact />
+                      <ConfidenceBadge axis="Serving" level={e.servingConfidence} compact />
                     ) : (
                       "—"
                     )}

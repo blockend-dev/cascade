@@ -6,7 +6,6 @@ import { ConfidenceBadge } from "../components/ConfidenceBadge";
 import { DataFreshness } from "../components/DataFreshness";
 import { Link } from "../router";
 import { ProviderMode } from "../../../sdk/src/types";
-import { ConfidenceLevel } from "../confidence";
 
 export function Provider({ address }: { address: string }) {
   const indexer = useIndexer();
@@ -90,7 +89,7 @@ export function Provider({ address }: { address: string }) {
                   <td>{e.modelId ? <Link to={`/models/${e.modelId}`}><Hex value={e.modelId} /></Link> : "—"}</td>
                   <td>
                     {e.servingConfidence !== null ? (
-                      <ConfidenceBadge axis="Serving" level={e.servingConfidence as ConfidenceLevel} compact />
+                      <ConfidenceBadge axis="Serving" level={e.servingConfidence} compact />
                     ) : (
                       "—"
                     )}

@@ -85,8 +85,8 @@ export function LineageGraph({ layout, focalModelId }: { layout: GraphLayout; fo
                 d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                 fill="none"
                 stroke={isSelected ? "var(--accent)" : "var(--edge-stroke)"}
-                strokeWidth={EDGE_WIDTH[edge.confidenceLevel as ConfidenceLevel]}
-                strokeDasharray={EDGE_DASH[edge.confidenceLevel as ConfidenceLevel]}
+                strokeWidth={EDGE_WIDTH[edge.confidenceLevel]}
+                strokeDasharray={EDGE_DASH[edge.confidenceLevel]}
                 style={{ cursor: "pointer" }}
                 tabIndex={0}
                 role="button"
