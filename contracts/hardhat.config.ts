@@ -29,6 +29,22 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {},
+    // Only defined when RPC_URL is actually set — `npm test`/`npm run
+    // build` never set it, so this is a no-op for every existing
+    // workflow. Populated entirely from environment variables
+    // (docs/deployment.md, contracts/.env.example); no real network
+    // endpoint or chain ID is hardcoded here, since none has been
+    // independently verified for this project's eventual deployment
+    // target — the operator supplies it explicitly.
+    ...(process.env.RPC_URL
+      ? {
+          target: {
+            url: process.env.RPC_URL,
+            chainId: process.env.CHAIN_ID ? Number(process.env.CHAIN_ID) : undefined,
+            accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+          },
+        }
+      : {}),
   },
 };
 

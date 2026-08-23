@@ -8,6 +8,14 @@ coverage/
 cache/
 artifacts/
 typechain-types/
+
+# Ephemeral local/test deployment records only — a real network's
+# deployments/<network>.json is meaningful to commit and intentionally
+# NOT ignored here; see docs/deployment.md.
+contracts/deployments/hardhat.json
+contracts/deployments/hardhat.*.json
+contracts/deployments/localhost.json
+contracts/deployments/localhost.*.json
 .DS_Store
 
 .claude/
