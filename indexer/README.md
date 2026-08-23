@@ -12,12 +12,18 @@ for the storage-engine and reorg-safety decisions.
 
 ```
 npm install
-npm run dev   # ts-node src/index.ts — wire up createIndexer() with your own config
+cp .env.example .env   # fill in RPC_URL, chain id, contract addresses
+npm run dev
 ```
 
-There's no standalone CLI/server entrypoint shipped in this phase (see
-docs/indexer.md's non-goals) — `createIndexer(db, provider, config)` is
-the integration point. A minimal usage:
+Starts a continuous sync loop against `RPC_URL` plus a read-only HTTP
+JSON query server on `HTTP_PORT` (default 8788) — see ADR 0014 for why
+the HTTP layer exists (Phase 10's frontend runs in a browser, which
+cannot import `node:sqlite` directly) and
+[`docs/indexer.md`](../docs/indexer.md) §10 for the full route list.
+
+To use `createIndexer(db, provider, config)` directly instead (e.g.
+from another Node process, or in a test):
 
 ```typescript
 import { ethers } from "ethers";
