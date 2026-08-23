@@ -6,4 +6,5 @@ export { buildContractCatalog, normalize } from "./normalize";
 export { insertEvent, ingestEvent, applyProjection } from "./projection";
 export { readSyncState, writeSyncState, recoverFromReorg, tipHasReorged, rebuildProjections } from "./reorg";
 export { createIndexer, CascadeIndexer } from "./sync";
+export { startIndexerServer } from "./server";
 export * as query from "./query";

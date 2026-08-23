@@ -62,6 +62,7 @@ function applySchema(db: DatabaseSync): void {
       created_at_timestamp INTEGER NOT NULL,
       first_seen_log_index INTEGER NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS idx_models_owner ON models(owner);
 
     CREATE TABLE IF NOT EXISTS edges (
       edge_id TEXT PRIMARY KEY,
@@ -117,6 +118,7 @@ function applySchema(db: DatabaseSync): void {
       settled_tx_hash TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_executions_model ON executions(model_id);
+    CREATE INDEX IF NOT EXISTS idx_executions_provider ON executions(provider);
 
     CREATE TABLE IF NOT EXISTS edge_attributions (
       execution_id TEXT NOT NULL,

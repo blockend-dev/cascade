@@ -54,6 +54,20 @@ function toEdgeRow(r: Record<string, unknown>): EdgeRow {
   };
 }
 
+function toExecutionRow(row: Record<string, unknown>): ExecutionRow {
+  return {
+    executionId: row.execution_id as string,
+    provider: (row.provider as string | null) ?? null,
+    modelId: (row.model_id as string | null) ?? null,
+    requestHash: (row.request_hash as string | null) ?? null,
+    epoch: row.epoch ? BigInt(row.epoch as string) : null,
+    amount: row.amount ? BigInt(row.amount as string) : null,
+    servingConfidence: row.serving_confidence === null || row.serving_confidence === undefined ? null : Number(row.serving_confidence),
+    consumedAtBlock: row.consumed_at_block === null ? null : Number(row.consumed_at_block),
+    settledAtBlock: row.settled_at_block === null ? null : Number(row.settled_at_block),
+  };
+}
+
 export function getModel(db: DatabaseSync, modelId: string): ModelRow | null {
   const row = db.prepare(`SELECT * FROM models WHERE model_id = ?`).get(modelId) as Record<string, unknown> | undefined;
   return row ? toModelRow(row) : null;
@@ -70,6 +84,27 @@ export function listModels(db: DatabaseSync, opts: { limit?: number; cursor?: st
        LIMIT ?`
     )
     .all(cursor.block, cursor.log, limit + 1) as Array<Record<string, unknown>>;
+  return paginate(rows, limit, (r) => [Number(r.created_at_block), Number(r.first_seen_log_index)], toModelRow);
+}
+
+/** Added for Phase 10's owner dashboard (ADR 0014) — backed by the
+ *  `models.owner` column Phase 9 already projected; no new data, just
+ *  a new indexed query over it. */
+export function listModelsByOwner(
+  db: DatabaseSync,
+  owner: string,
+  opts: { limit?: number; cursor?: string } = {}
+): Page<ModelRow> {
+  const limit = opts.limit ?? DEFAULT_LIMIT;
+  const cursor = opts.cursor ? decodeCursor(opts.cursor) : { block: -1, log: -1 };
+  const rows = db
+    .prepare(
+      `SELECT * FROM models
+       WHERE owner = ? AND (created_at_block, first_seen_log_index) > (?, ?)
+       ORDER BY created_at_block ASC, first_seen_log_index ASC
+       LIMIT ?`
+    )
+    .all(owner, cursor.block, cursor.log, limit + 1) as Array<Record<string, unknown>>;
   return paginate(rows, limit, (r) => [Number(r.created_at_block), Number(r.first_seen_log_index)], toModelRow);
 }
 
@@ -137,18 +172,74 @@ export function getExecution(db: DatabaseSync, executionId: string): ExecutionRo
   const row = db.prepare(`SELECT * FROM executions WHERE execution_id = ?`).get(executionId) as
     | Record<string, unknown>
     | undefined;
-  if (!row) return null;
-  return {
-    executionId: row.execution_id as string,
-    provider: (row.provider as string | null) ?? null,
-    modelId: (row.model_id as string | null) ?? null,
-    requestHash: (row.request_hash as string | null) ?? null,
-    epoch: row.epoch ? BigInt(row.epoch as string) : null,
-    amount: row.amount ? BigInt(row.amount as string) : null,
-    servingConfidence: row.serving_confidence === null || row.serving_confidence === undefined ? null : Number(row.serving_confidence),
-    consumedAtBlock: row.consumed_at_block === null ? null : Number(row.consumed_at_block),
-    settledAtBlock: row.settled_at_block === null ? null : Number(row.settled_at_block),
-  };
+  return row ? toExecutionRow(row) : null;
+}
+
+/** Cursor for the two execution-listing queries below: `(order_block,
+ *  execution_id)` descending, with `execution_id` (globally unique — a
+ *  deterministic hash, never signer-chosen) as the tiebreaker for
+ *  executions that land in the same block. A plain `(block, logIndex)`
+ *  cursor doesn't apply here since `executions` is a derived per-entity
+ *  table, not an append-only log — there is no single log_index once
+ *  UsageProofConsumed and ExecutionSettled have been merged into one row. */
+function decodeExecutionCursor(cursor?: string): { block: number; executionId: string } {
+  if (!cursor) return { block: Number.MAX_SAFE_INTEGER, executionId: "0x" + "f".repeat(64) };
+  const decoded = Buffer.from(cursor, "base64url").toString("utf-8");
+  const sep = decoded.indexOf(":");
+  return { block: Number(decoded.slice(0, sep)), executionId: decoded.slice(sep + 1) };
+}
+function encodeExecutionCursor(block: number, executionId: string): string {
+  return Buffer.from(`${block}:${executionId}`, "utf-8").toString("base64url");
+}
+function paginateExecutions(rows: Array<Record<string, unknown>>, limit: number): Page<ExecutionRow> {
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const items = page.map(toExecutionRow);
+  const last = page[page.length - 1];
+  const nextCursor = hasMore ? encodeExecutionCursor(Number(last.order_block), last.execution_id as string) : null;
+  return { items, nextCursor };
+}
+
+/** Added for Phase 10 (ADR 0014) — backed by `executions.model_id`,
+ *  already projected in Phase 9. Ordered by settlement block where
+ *  settled, otherwise by consumption block, newest first (most
+ *  relevant to a model-detail "recent activity" view). */
+export function listExecutionsByModel(
+  db: DatabaseSync,
+  modelId: string,
+  opts: { limit?: number; cursor?: string } = {}
+): Page<ExecutionRow> {
+  const limit = opts.limit ?? DEFAULT_LIMIT;
+  const cursor = decodeExecutionCursor(opts.cursor);
+  const rows = db
+    .prepare(
+      `SELECT *, COALESCE(settled_at_block, consumed_at_block, 0) AS order_block FROM executions
+       WHERE model_id = ? AND (order_block, execution_id) < (?, ?)
+       ORDER BY order_block DESC, execution_id DESC
+       LIMIT ?`
+    )
+    .all(modelId, cursor.block, cursor.executionId, limit + 1) as Array<Record<string, unknown>>;
+  return paginateExecutions(rows, limit);
+}
+
+/** Added for Phase 10's provider view (ADR 0014) — backed by
+ *  `executions.provider`, already projected in Phase 9. */
+export function listExecutionsByProvider(
+  db: DatabaseSync,
+  provider: string,
+  opts: { limit?: number; cursor?: string } = {}
+): Page<ExecutionRow> {
+  const limit = opts.limit ?? DEFAULT_LIMIT;
+  const cursor = decodeExecutionCursor(opts.cursor);
+  const rows = db
+    .prepare(
+      `SELECT *, COALESCE(settled_at_block, consumed_at_block, 0) AS order_block FROM executions
+       WHERE provider = ? AND (order_block, execution_id) < (?, ?)
+       ORDER BY order_block DESC, execution_id DESC
+       LIMIT ?`
+    )
+    .all(provider, cursor.block, cursor.executionId, limit + 1) as Array<Record<string, unknown>>;
+  return paginateExecutions(rows, limit);
 }
 
 export function getExecutionAttribution(
