@@ -56,11 +56,21 @@ marked as an economic (not cryptographic) property.
 
 ## Settlement invariants
 
-- **INV-12 (replay uniqueness).** A `UsageProof.nonce` can be consumed
-  exactly once, globally, across all epochs.
-- **INV-13 (epoch exclusivity).** A given epoch, once settled, cannot be
-  settled again — the settlement submission function is a one-shot
-  transition per epoch per model.
+- **INV-12 (replay uniqueness).** A `UsageProof` cannot be settled twice.
+  Replay protection is not a nonce — there is no `nonce` field on
+  `UsageProof` and none is signer-chosen. It is the deterministic
+  `executionId = keccak256(provider, modelId, requestHash, responseHash)`
+  (`ExecutionRegistry.hashExecutionId`), tracked in `executionConsumed`
+  and checked by `consumeUsageProof`; consumed exactly once, globally,
+  across all epochs. See `docs/protocol-spec.md` §2.
+- **INV-13 (epoch validity, not batching).** `settleExecution` only
+  accepts a proof whose `epoch` equals `AttributionSettlement.currentEpoch`
+  at submission time; a proof from a past or future epoch reverts
+  (`InvalidEpoch`). `epoch` is a coarse validity/staleness filter, not a
+  settlement-batching or uniqueness key — any number of independent
+  executions may settle within one epoch, each protected individually by
+  INV-12's replay check, not by epoch. `currentEpoch` only advances via
+  the owner-gated `advanceEpoch`. See `docs/protocol-spec.md` §4.
 - **INV-14 (conservation).** For any settled epoch, the sum of amounts
   credited to all claimable balances for a given model's usage never
   exceeds the total attribution fees actually deposited for that model in

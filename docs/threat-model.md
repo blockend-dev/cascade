@@ -32,7 +32,7 @@ unaddressed silently.
 
 | # | Attack | Disposition |
 |---|---|---|
-| 1 | Replayed usage proof | **Prevented.** Usage proofs carry a canonical unique identifier (request hash + provider + epoch); consumed identifiers are rejected on resubmission. |
+| 1 | Replayed usage proof | **Prevented.** Usage proofs are keyed by a deterministic `executionId = keccak256(provider, modelId, requestHash, responseHash)` (`ExecutionRegistry.hashExecutionId`), not a nonce; consumed identifiers are rejected on resubmission. |
 | 2 | Modified response | **Prevented.** Response hash is bound into the signed TEE payload; a modified response fails signature verification. |
 | 3 | Modified request | **Prevented.** Same mechanism — request hash is bound into the signed payload. |
 | 4 | Provider substitution | **Prevented.** Provider identity is bound into the signed payload; crediting a different provider requires forging its registered signer's signature. |
@@ -57,7 +57,7 @@ unaddressed silently.
 | 23 | Malformed EIP-712 signature | **Prevented.** Standard EIP-712 domain separation and typed-data verification; malformed signatures fail `ecrecover` checks or recover to an unregistered address. |
 | 24 | Signature replay across chains | **Prevented.** EIP-712 domain separator includes `chainId`. |
 | 25 | Signature replay across contracts | **Prevented.** EIP-712 domain separator includes `verifyingContract`. |
-| 26 | Epoch replay | **Prevented.** Settlement submissions are keyed by epoch; a settled epoch cannot be resubmitted. |
+| 26 | Epoch replay | **Prevented.** A proof's `epoch` must equal `AttributionSettlement.currentEpoch` at submission time (`InvalidEpoch` otherwise) — a proof from a past or future epoch is rejected outright, independent of the per-execution replay protection in #1. Epochs are not themselves a settlement-batching or uniqueness key; any number of independent executions may settle within one epoch. |
 | 27 | Settlement rounding / dust manipulation | **Bounded.** Integer-division remainders accumulate to a disclosed dust pool, never silently dropped or exploitable for repeated extraction — see `docs/security-invariants.md`. |
 | 28 | Withdrawal / reentrancy | **Prevented.** Pull-payment pattern with checks-effects-interactions and a reentrancy guard on claim functions. |
 | 29 | Unauthorized model update | **Prevented.** Only the registered owner may update metadata or revoke; ownership transfer is a distinct, logged event. |
