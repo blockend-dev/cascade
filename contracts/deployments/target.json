@@ -1,0 +1,13 @@
+{
+  "network": "target",
+  "chainId": "16661",
+  "deployer": "0x5104C1A69242D94159Cf7151277252e568cB8F98",
+  "resolver": "0x5104C1A69242D94159Cf7151277252e568cB8F98",
+  "deployedAt": "2026-08-24T14:59:22.863Z",
+  "addresses": {
+    "cascadeRegistry": "0x74F13b00B8e691f5c3794B803b80032Aa268b25b",
+    "executionRegistry": "0x27Ec35689323624f209F5B19b53Ee4d07D77767d",
+    "attributionSettlement": "0xA5eFE05E7d20B814e3C0B138a518277E876f2647",
+    "trainingProvenanceRegistry": "0x383D962Bf9fCB34AB4910B9cC54695c52EB7e635"
+  }
+}
