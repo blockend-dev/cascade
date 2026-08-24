@@ -59,7 +59,10 @@ describe("EdgeActions — challenge bond is always the live protocol value, neve
   });
 
   it("renders nothing when no wallet is connected — never prompts an anonymous write", () => {
-    const client = { read: { getCascadeRegistryParameters: vi.fn() }, write: {} };
+    // useAsync() calls this unconditionally on mount (before EdgeActions'
+    // own early return skips rendering it) — must resolve to a real
+    // Promise like the live SDK call does, not vi.fn()'s bare undefined.
+    const client = { read: { getCascadeRegistryParameters: vi.fn().mockResolvedValue({}) }, write: {} };
     render(
       <WalletContext.Provider value={fakeWalletState({ account: null, client: client as never })}>
         <EdgeActions edge={EDGE} config={fakeConfig()} />

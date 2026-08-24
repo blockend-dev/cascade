@@ -47,7 +47,10 @@ describe("LineageGraph — accessible, non-color-only representation of a real D
     );
     const edgeButtons = screen.getAllByRole("button", { name: /Edge .* to .*/ });
     expect(edgeButtons.length).toBeGreaterThan(0);
-    expect(edgeButtons[0]).toHaveAttribute("tabIndex", "0");
+    // SVG elements are matched case-sensitively by getAttribute (unlike
+    // HTML elements) — the actual DOM attribute is lowercase "tabindex"
+    // even though the React/JSX prop is spelled "tabIndex".
+    expect(edgeButtons[0]).toHaveAttribute("tabindex", "0");
   });
 
   it("a Declared edge and a CryptographicallyBound edge get visually distinct treatment via more than one signal (dash pattern differs, and the text label states the level explicitly)", () => {

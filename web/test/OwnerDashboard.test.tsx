@@ -66,7 +66,13 @@ describe("OwnerDashboard — security: no client-controlled recipient/amount for
 
   it("shows the live claimable balance, not a client-editable field", async () => {
     renderDashboard(12345n);
-    expect(await screen.findByText(/12345 wei/)).toBeInTheDocument();
+    // "12345 wei" legitimately appears twice once claimable > 0 (the
+    // balance line and the claim summary sentence) — scope to the
+    // balance line specifically, the same amount the claim summary
+    // sentence attributes to.
+    expect(
+      await screen.findByText((_, element) => element?.className === "claimable-amount" && /12345 wei/.test(element.textContent ?? ""))
+    ).toBeInTheDocument();
     // The claimable amount is rendered as text, never as an <input>.
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
   });
