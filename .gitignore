@@ -19,3 +19,7 @@ contracts/deployments/localhost.*.json
 .DS_Store
 
 .claude/
+
+# Output of wrapper/scripts/verify-download.ts — a fresh copy every run,
+# never the artifact of record (that's demo-artifact/cascade-demo-model.safetensors itself).
+wrapper/demo-artifact/*.downloaded.*
