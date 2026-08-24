@@ -29,11 +29,20 @@ import { ethers, network } from "hardhat";
 
 const CONFIRMATIONS = process.env.CONFIRMATIONS ? Number(process.env.CONFIRMATIONS) : 1;
 
-async function waitConfirmed(tx: { deploymentTransaction(): { wait(confirmations?: number): Promise<unknown> } | null }) {
+/** Waits for the configured number of confirmations and returns the
+ *  block the deployment transaction actually landed in — recorded in
+ *  the deployment JSON specifically so `indexer/.env`'s `START_BLOCK`
+ *  can be set exactly, not estimated (a gap found and fixed after this
+ *  script's first real deployment: it previously logged an
+ *  instruction to "set START_BLOCK to the deployment block" without
+ *  ever telling the operator what that block number was). */
+async function confirmAndGetBlock(tx: {
+  deploymentTransaction(): { wait(confirmations?: number): Promise<{ blockNumber: number } | null> } | null;
+}): Promise<number | null> {
   const deploymentTx = tx.deploymentTransaction();
-  if (deploymentTx && CONFIRMATIONS > 1) {
-    await deploymentTx.wait(CONFIRMATIONS);
-  }
+  if (!deploymentTx) return null;
+  const receipt = await deploymentTx.wait(Math.max(CONFIRMATIONS, 1));
+  return receipt ? receipt.blockNumber : null;
 }
 
 async function main() {
@@ -63,7 +72,7 @@ async function main() {
   const CascadeRegistryFactory = await ethers.getContractFactory("CascadeRegistry");
   const cascadeRegistry = await CascadeRegistryFactory.deploy(resolver);
   await cascadeRegistry.waitForDeployment();
-  await waitConfirmed(cascadeRegistry);
+  const cascadeRegistryBlock = await confirmAndGetBlock(cascadeRegistry);
   const cascadeRegistryAddress = await cascadeRegistry.getAddress();
   console.log(`   CascadeRegistry: ${cascadeRegistryAddress}`);
 
@@ -71,7 +80,7 @@ async function main() {
   const ExecutionRegistryFactory = await ethers.getContractFactory("ExecutionRegistry");
   const executionRegistry = await ExecutionRegistryFactory.deploy(cascadeRegistryAddress);
   await executionRegistry.waitForDeployment();
-  await waitConfirmed(executionRegistry);
+  await confirmAndGetBlock(executionRegistry);
   const executionRegistryAddress = await executionRegistry.getAddress();
   console.log(`   ExecutionRegistry: ${executionRegistryAddress}`);
 
@@ -79,7 +88,7 @@ async function main() {
   const AttributionSettlementFactory = await ethers.getContractFactory("AttributionSettlement");
   const attributionSettlement = await AttributionSettlementFactory.deploy(cascadeRegistryAddress, executionRegistryAddress);
   await attributionSettlement.waitForDeployment();
-  await waitConfirmed(attributionSettlement);
+  await confirmAndGetBlock(attributionSettlement);
   const attributionSettlementAddress = await attributionSettlement.getAddress();
   console.log(`   AttributionSettlement: ${attributionSettlementAddress}`);
 
@@ -87,7 +96,7 @@ async function main() {
   const TrainingProvenanceRegistryFactory = await ethers.getContractFactory("TrainingProvenanceRegistry");
   const trainingProvenanceRegistry = await TrainingProvenanceRegistryFactory.deploy(cascadeRegistryAddress, executionRegistryAddress);
   await trainingProvenanceRegistry.waitForDeployment();
-  await waitConfirmed(trainingProvenanceRegistry);
+  await confirmAndGetBlock(trainingProvenanceRegistry);
   const trainingProvenanceRegistryAddress = await trainingProvenanceRegistry.getAddress();
   console.log(`   TrainingProvenanceRegistry: ${trainingProvenanceRegistryAddress}`);
 
@@ -122,6 +131,10 @@ async function main() {
     deployer: deployer.address,
     resolver,
     deployedAt: new Date().toISOString(),
+    // The earliest of the four deployment blocks (CascadeRegistry's,
+    // deployed first) — the correct, exact value for indexer/.env's
+    // START_BLOCK, not an estimate.
+    deploymentBlock: cascadeRegistryBlock,
     addresses: {
       cascadeRegistry: cascadeRegistryAddress,
       executionRegistry: executionRegistryAddress,
@@ -152,7 +165,7 @@ async function main() {
   console.log(`  VITE_EXECUTION_REGISTRY_ADDRESS=${deployment.addresses.executionRegistry}`);
   console.log(`  VITE_ATTRIBUTION_SETTLEMENT_ADDRESS=${deployment.addresses.attributionSettlement}`);
   console.log(`  VITE_TRAINING_PROVENANCE_REGISTRY_ADDRESS=${deployment.addresses.trainingProvenanceRegistry}`);
-  console.log(`\nAlso set indexer/.env's START_BLOCK to this deployment's block number so backfill doesn't scan from genesis unnecessarily.`);
+  console.log(`\nAlso set indexer/.env's START_BLOCK=${deployment.deploymentBlock} so backfill doesn't scan from genesis unnecessarily.`);
 }
 
 main().catch((err) => {
