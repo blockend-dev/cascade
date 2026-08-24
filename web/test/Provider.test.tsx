@@ -13,6 +13,15 @@ function fakeIndexer(mode: ProviderMode): IndexerClient {
     getProvider: vi.fn().mockResolvedValue({ provider: ADDRESS, mode, signerCount: 1 }),
     getProviderSigners: vi.fn().mockResolvedValue([{ signer: "0xsigner", provider: ADDRESS, active: true }]),
     listExecutionsByProvider: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    // DataFreshness (rendered on every page, docs/frontend.md §5) calls this on mount.
+    getSyncStatus: vi.fn().mockResolvedValue({
+      chainId: 31337n,
+      lastIndexedBlock: 100,
+      lastIndexedBlockHash: "0x" + "aa".repeat(32),
+      headBlock: 100,
+      safeHead: 97,
+      lagBlocks: 0,
+    }),
   } as unknown as IndexerClient;
 }
 

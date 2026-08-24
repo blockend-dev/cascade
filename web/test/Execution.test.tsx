@@ -21,6 +21,15 @@ function fakeIndexer(overrides: Partial<IndexerClient> = {}): IndexerClient {
       settledAtBlock: 10,
     }),
     getExecutionAttribution: vi.fn().mockResolvedValue({ edgeAttributions: [], ownerCredits: [] }),
+    // DataFreshness (rendered on every page, docs/frontend.md §5) calls this on mount.
+    getSyncStatus: vi.fn().mockResolvedValue({
+      chainId: 31337n,
+      lastIndexedBlock: 100,
+      lastIndexedBlockHash: "0x" + "aa".repeat(32),
+      headBlock: 100,
+      safeHead: 97,
+      lagBlocks: 0,
+    }),
     ...overrides,
   } as unknown as IndexerClient;
 }

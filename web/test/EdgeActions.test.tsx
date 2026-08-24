@@ -37,7 +37,10 @@ function renderEdgeActions(edge: EdgeRow = EDGE) {
 describe("EdgeActions — challenge bond is always the live protocol value, never client-editable", () => {
   it("shows the live challenge bond amount and no editable amount input", async () => {
     renderEdgeActions();
-    expect(await screen.findByText(/20000000000000000 wei/)).toBeInTheDocument();
+    // The live amount legitimately appears twice (the explanatory summary
+    // and the button label) — assert the button specifically, matching
+    // the exact-amount pattern the second test below also relies on.
+    expect(await screen.findByRole("button", { name: /Challenge \(bond: 20000000000000000 wei\)/ })).toBeInTheDocument();
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/bond/i)).not.toBeInTheDocument(); // no input, only a button showing the live value
   });

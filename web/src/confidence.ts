@@ -42,7 +42,7 @@ export const CONFIDENCE_INFO: Record<ConfidenceLevel, ConfidenceInfo> = {
     establishes:
       "A specific, identifiable 0G provider (a registered signer) signed a non-repudiable claim naming a base model, dataset root, training script, and resulting commitment, and that claim's commitments match what's registered on-chain.",
     doesNotEstablish:
-      "That the provider's enclave actually computed the declared output from the declared inputs. This is circumstantial, accountable evidence — a real party is on the hook for having signed it — not a cryptographic proof of derivation.",
+      "That the provider's enclave actually computed the declared output from the declared inputs. This is circumstantial, accountable evidence — a real party is on the hook for having signed it — not a hardware-backed guarantee that derivation actually happened as declared.",
   },
   [ConfidenceLevel.CryptographicallyBound]: {
     level: ConfidenceLevel.CryptographicallyBound,
@@ -51,7 +51,7 @@ export const CONFIDENCE_INFO: Record<ConfidenceLevel, ConfidenceInfo> = {
     establishes:
       "The response was served through the Cascade-authored attested wrapper, which verifies the loaded model's hash against the registered commitment before serving, inside a measured TEE launch configuration.",
     doesNotEstablish:
-      "That the frontend itself has independently verified the TDX/GPU attestation quote — see the Verification panel for exactly what is and isn't checked, and by whom.",
+      "That the frontend itself has independently confirmed the TDX/GPU attestation quote — see the Verification panel for exactly what is and isn't checked, and by whom.",
   },
 };
 
