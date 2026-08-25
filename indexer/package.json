@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js",
+    "start": "node dist/indexer/src/main.js",
     "dev": "ts-node src/main.ts"
   },
   "dependencies": {
