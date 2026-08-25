@@ -1,0 +1,51 @@
+# Deploys indexer/ (not web/ — that's Vercel, see vercel.json) as a
+# real always-on process: a persistent SQLite file (the "data" mount
+# below) plus an indefinite background chain-sync loop, which is
+# exactly what Vercel's serverless model can't run. See
+# indexer/Dockerfile and docs/indexer.md.
+#
+# `app` must be globally unique across all Fly accounts — change it
+# if this name is already taken before running `fly launch`/`deploy`.
+app = "cascade-indexer"
+primary_region = "iad"
+
+[build]
+  dockerfile = "indexer/Dockerfile"
+
+# Public, non-secret configuration only (contract addresses and a
+# public RPC endpoint) — matches how these same values already live
+# in plain env vars locally (indexer/.env.example) and in CI. No
+# private key or credential belongs here.
+[env]
+  RPC_URL = "https://evmrpc.0g.ai"
+  CHAIN_ID = "16661"
+  CASCADE_REGISTRY_ADDRESS = "0x74F13b00B8e691f5c3794B803b80032Aa268b25b"
+  EXECUTION_REGISTRY_ADDRESS = "0x27Ec35689323624f209F5B19b53Ee4d07D77767d"
+  ATTRIBUTION_SETTLEMENT_ADDRESS = "0xA5eFE05E7d20B814e3C0B138a518277E876f2647"
+  TRAINING_PROVENANCE_REGISTRY_ADDRESS = "0x383D962Bf9fCB34AB4910B9cC54695c52EB7e635"
+  START_BLOCK = "42518150"
+  DB_PATH = "/data/cascade-index.sqlite"
+  HTTP_PORT = "8788"
+
+# Persistent volume for the SQLite file — without this, a redeploy or
+# restart would silently lose all indexed state and resync from
+# START_BLOCK. Create it once with:
+#   fly volumes create cascade_indexer_data --region iad --size 1
+[[mounts]]
+  source = "cascade_indexer_data"
+  destination = "/data"
+
+# min_machines_running/auto_stop_machines=false keep this genuinely
+# always-on — the background sync loop (indexer/src/main.ts's `tick`)
+# must keep running even with zero incoming HTTP requests, unlike a
+# typical scale-to-zero web service.
+[http_service]
+  internal_port = 8788
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
