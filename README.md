@@ -10,6 +10,11 @@ publicly registered ancestry graph, pay the right ancestors the right
 amount — and say exactly how strong that guarantee is, per lineage edge,
 every time.
 
+**Live**: [cascade-three-iota.vercel.app](https://cascade-three-iota.vercel.app) — deployed on 0G mainnet
+(chain 16661), four contracts live, a real model artifact stored via 0G
+Storage with its root hash registered on-chain as the model commitment.
+Full evidence, addresses, and transaction hashes: [`docs/mainnet-evidence.md`](docs/mainnet-evidence.md).
+
 Start here: [`docs/architecture.md`](docs/architecture.md).
 
 ## Status
