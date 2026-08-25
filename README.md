@@ -159,6 +159,3 @@ Not yet built; listed for direction, not as a commitment:
 3. Expanding integrations for additional model providers and marketplaces.
 4. Continued hardening of the protocol and its operational tooling.
 
-## License
-
-This repository does not currently contain a `LICENSE` file. That should be addressed as a separate, explicit decision rather than assumed here.
