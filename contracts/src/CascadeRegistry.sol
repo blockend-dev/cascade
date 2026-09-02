@@ -5,19 +5,18 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title CascadeRegistry
-/// @notice Registers AI models and their claimed lineage edges, and adjudicates
-///         challenges to those claims.
+/// @notice Registers AI models and their claimed lineage edges, and
+///         adjudicates challenges to those claims.
+/// @dev Confirms that a lineage claim was registered, by whom, with what
+///      stake, and whether it survived its challenge window or was
+///      upheld/rejected by the resolver — it does not establish that the
+///      claim is true. Claim strength is entirely a function of
+///      `ConfidenceLevel`; see docs/protocol-spec.md §5 and
+///      docs/trust-model.md.
 ///
-/// @dev This contract does NOT prove that a lineage claim is true. It proves
-///      that a claim was registered, by whom, with what stake, and whether it
-///      survived its challenge window unchallenged or was upheld/rejected by
-///      the resolver. The strength of the underlying claim depends entirely on
-///      `ConfidenceLevel` — see docs/protocol-spec.md §5 and docs/trust-model.md
-///      before treating any state here as a cryptographic guarantee.
-///
-///      Enforces INV-1 through INV-11 from docs/security-invariants.md.
-///      Challenge/finalization lives here rather than a separate contract —
-///      see docs/adr/0004-challenge-mechanism-in-lineage-registry.md.
+///      Enforces INV-1 through INV-11 (docs/security-invariants.md).
+///      Challenge and finalization live here rather than in a separate
+///      contract; see docs/adr/0004-challenge-mechanism-in-lineage-registry.md.
 contract CascadeRegistry is Ownable, ReentrancyGuard {
     // ---------------------------------------------------------------------
     // Types
@@ -28,12 +27,11 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
         Revoked
     }
 
-    /// @dev Ascending strength on purpose: Declared < AttestedTraining <
-    ///      CryptographicallyBound, so "weakest edge on a path" is a plain
-    ///      min() over the enum's underlying uint8. In user-facing docs this
-    ///      maps to Level 3 / Level 2 / Level 1 respectively — the numbering
-    ///      schemes intentionally run in opposite directions; see
-    ///      docs/protocol-spec.md §1.
+    /// @dev Ordered by ascending strength (Declared < AttestedTraining <
+    ///      CryptographicallyBound) so "weakest edge on a path" is a plain
+    ///      min() over the enum's underlying uint8. User-facing docs number
+    ///      these in the opposite direction — Level 3 / Level 2 / Level 1
+    ///      respectively; see docs/protocol-spec.md §1.
     enum ConfidenceLevel {
         Declared,
         AttestedTraining,
@@ -89,9 +87,9 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
     uint256 public challengeBondAmount = 0.01 ether;
     uint64 public challengeWindow = 3 days;
 
-    /// @dev MVP challenge resolver. A known, documented centralization point —
-    ///      see docs/threat-model.md ("Resolver") and docs/adr/0004. Not a
-    ///      decentralized adjudication mechanism yet.
+    /// @dev Single-address challenge resolver — a documented centralization
+    ///      point (docs/threat-model.md "Resolver", docs/adr/0004), not a
+    ///      decentralized adjudication mechanism.
     address public resolver;
 
     mapping(bytes32 => Model) private _models;
@@ -192,7 +190,7 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
         emit ModelMetadataUpdated(modelId, metadataURI);
     }
 
-    /// @dev INV-4 note: ownership transfer is a distinct, logged event so
+    /// @dev INV-4: ownership transfer is logged as a distinct event so
     ///      historical attribution before a transfer remains provable off-chain.
     function transferModelOwnership(bytes32 modelId, address newOwner) external {
         Model storage model = _requireModel(modelId);
@@ -289,10 +287,10 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
         emit LineageEdgeChallenged(edgeId, msg.sender, msg.value);
     }
 
-    /// @notice Resolves a challenged edge. MVP: role-gated, not decentralized —
-    ///         see docs/adr/0004. INV-10: moves to exactly one terminal state.
-    ///         INV-11: the losing party's funds go to the winner, never back
-    ///         to both.
+    /// @notice Resolves a challenged edge. Role-gated to `resolver`, not
+    ///         decentralized (docs/adr/0004). INV-10: moves to exactly one
+    ///         terminal state. INV-11: the losing party's funds go to the
+    ///         winner, never back to both.
     function resolveChallenge(bytes32 edgeId, bool challengeUpheld) external nonReentrant {
         if (msg.sender != resolver) revert NotResolver();
         LineageEdge storage edge = _requireEdge(edgeId);
@@ -338,8 +336,8 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
     }
 
     // ---------------------------------------------------------------------
-    // Admin (Ownable) — economic parameters kept configurable rather than
-    // hardcoded, per design requirement.
+    // Admin (Ownable) — economic parameters are configurable rather than
+    // fixed constants.
     // ---------------------------------------------------------------------
 
     function setResolver(address newResolver) external onlyOwner {
@@ -398,11 +396,12 @@ contract CascadeRegistry is Ownable, ReentrancyGuard {
         return _parentEdgesOf[childModelId];
     }
 
-    /// @notice Weakest-link confidence over a caller-supplied path of edges.
-    ///         Off-chain resolution (Phase 9) computes full DAG splits; this
-    ///         is exposed for direct inspection of a specific claimed path.
-    ///         Reverts if any edge in the path is not Finalized. See
-    ///         docs/security-invariants.md INV-6.
+    /// @notice Weakest-link confidence over a caller-supplied path of edges,
+    ///         for direct inspection of one specific claimed path.
+    ///         `AttributionSettlement` computes the full graph's effective
+    ///         confidence during settlement; this is a convenience view,
+    ///         not the settlement path itself. Reverts if any edge in the
+    ///         path is not Finalized. See docs/security-invariants.md INV-6.
     function pathConfidence(bytes32[] calldata edgeIds) external view returns (ConfidenceLevel) {
         require(edgeIds.length > 0, "empty path");
         LineageEdge storage first = _requireEdge(edgeIds[0]);

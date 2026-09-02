@@ -10,25 +10,19 @@ import {CascadeRegistry} from "./CascadeRegistry.sol";
 /// @notice Registers provider signers and verifies canonical UsageProof
 ///         evidence — the cryptographic boundary between 0G's execution
 ///         evidence and Cascade's AttributionSettlement.
+/// @dev Verification establishes: the proof was signed by a key
+///      registered to provider P (ECDSA-checked); the proof's claimed
+///      model commitment matches what's registered in `CascadeRegistry`
+///      for `modelId`, or the call reverts; and this execution has not
+///      been consumed before.
 ///
-/// @dev What this contract establishes, precisely, and nothing more:
-///
-///      1. "This EIP-712-typed proof was signed by a key registered to
-///         provider P" — a real, on-chain-checked ECDSA binding.
-///      2. "The proof's claimed model commitment matches what's registered
-///         for modelId in CascadeRegistry" — a real, on-chain-checked
-///         equality, or the call reverts.
-///      3. "This specific execution has not been consumed before" —
-///         real, on-chain replay protection.
-///
-///      What it does NOT establish: that a registered signer address is a
-///      genuine 0G-attested TEE key (see docs/adr/0005 — that check is a
-///      client-side/off-chain responsibility today), or that a provider
-///      marked `CascadeWrapper` is actually running the audited Cascade
-///      wrapper (see docs/adr/0006 — that flag is an owner-attested
-///      placeholder pending Phase 7). Both limitations are load-bearing,
-///      not oversights — see docs/trust-model.md before treating this
-///      contract's output as a stronger guarantee than it makes.
+///      It does not establish that a registered signer address is a
+///      genuine 0G-attested TEE key — that check is a client-side/
+///      off-chain responsibility today (docs/adr/0005) — or that a
+///      provider marked `CascadeWrapper` is running the audited Cascade
+///      wrapper, which is an owner-attested flag rather than a
+///      cryptographic check until wrapper-measurement verification is
+///      implemented (docs/adr/0006). See docs/trust-model.md.
 contract ExecutionRegistry is Ownable, EIP712 {
     // ---------------------------------------------------------------------
     // Types
@@ -40,10 +34,10 @@ contract ExecutionRegistry is Ownable, EIP712 {
     }
 
     /// @notice The canonical, EIP-712-typed statement of one inference event.
-    /// @dev Deliberately carries no payment, recipient, or user field — see
-    ///      docs/adr/0003 and docs/protocol-spec.md §6. Attribution/payment
-    ///      is Phase 4's concern, built on top of what this struct verifies,
-    ///      never inside it.
+    /// @dev Carries no payment, recipient, or user field by design
+    ///      (docs/adr/0003, docs/protocol-spec.md §6) — attribution and
+    ///      payment are `AttributionSettlement`'s concern, built on top of
+    ///      what this struct verifies, not inside it.
     struct UsageProof {
         bytes32 modelId;
         bytes32 modelCommitment;
@@ -78,12 +72,11 @@ contract ExecutionRegistry is Ownable, EIP712 {
 
     CascadeRegistry public immutable cascadeRegistry;
 
-    /// @notice How long after `issuedAt` a proof remains acceptable. Defense
-    ///         in depth against very stale submissions — NOT the replay
-    ///         protection mechanism itself (that's `executionConsumed`,
-    ///         keyed deterministically, not by time). See
-    ///         docs/threat-model.md #7 ("avoid relying solely on
-    ///         timestamps").
+    /// @notice How long after `issuedAt` a proof remains acceptable — defense
+    ///         in depth against stale submissions, not the replay-protection
+    ///         mechanism itself (that's `executionConsumed`, keyed
+    ///         deterministically rather than by time). See
+    ///         docs/threat-model.md #7.
     uint64 public proofValidityWindow = 30 days;
 
     mapping(address => address) public providerOfSigner;
@@ -134,9 +127,8 @@ contract ExecutionRegistry is Ownable, EIP712 {
     /// @notice Registers `msg.sender` as the provider behind `signerAddress`.
     ///         A provider may register multiple signer addresses (e.g. one
     ///         per enclave instance); each resolves back to this provider.
-    /// @dev Self-registration only. Cascade does not verify off-chain that
-    ///      `signerAddress` is a genuine 0G-attested TEE key — see the
-    ///      contract-level NatSpec above and docs/adr/0005.
+    /// @dev Self-registration only. Whether `signerAddress` is a genuine
+    ///      0G-attested TEE key is not verified here — see docs/adr/0005.
     function registerSigner(address signerAddress) external {
         if (signerAddress == address(0)) revert ZeroAddress();
         if (providerOfSigner[signerAddress] != address(0)) revert SignerAlreadyRegistered();
@@ -153,9 +145,10 @@ contract ExecutionRegistry is Ownable, EIP712 {
         emit SignerRevoked(msg.sender, signerAddress);
     }
 
-    /// @notice Sets a provider's serving mode. Owner-gated placeholder — see
-    ///         docs/adr/0006. Not a cryptographic claim until Phase 7
-    ///         replaces this with a real wrapper-measurement check.
+    /// @notice Sets a provider's serving mode. Owner-gated; `CascadeWrapper`
+    ///         is an attested claim about operational configuration, not a
+    ///         cryptographic guarantee until wrapper-measurement
+    ///         verification is implemented (docs/adr/0006).
     function setProviderMode(address provider, ProviderMode mode) external onlyOwner {
         providerMode[provider] = mode;
         emit ProviderModeUpdated(provider, mode);
@@ -171,8 +164,8 @@ contract ExecutionRegistry is Ownable, EIP712 {
     }
 
     // ---------------------------------------------------------------------
-    // Canonical hashing (point 11 — single source of truth for the SDK,
-    // relayer, and tests to reuse rather than re-deriving this encoding)
+    // Canonical hashing — single source of truth for the SDK, relayer, and
+    // off-chain tooling, so they never re-derive this encoding independently.
     // ---------------------------------------------------------------------
 
     /// @notice The EIP-712 struct hash of a UsageProof (pre-domain-separator).
@@ -191,9 +184,9 @@ contract ExecutionRegistry is Ownable, EIP712 {
         );
     }
 
-    /// @notice The final digest a signer actually signs — domain-separated,
-    ///         binding chainId and this contract's address (cross-chain and
-    ///         cross-contract replay protection, per EIP-712 itself).
+    /// @notice The final digest a signer signs — domain-separated, binding
+    ///         chainId and this contract's address for cross-chain and
+    ///         cross-contract replay protection, per EIP-712.
     function hashTypedDataDigest(UsageProof calldata proof) external view returns (bytes32) {
         return _hashTypedDataV4(hashUsageProof(proof));
     }
@@ -224,9 +217,9 @@ contract ExecutionRegistry is Ownable, EIP712 {
         return _verify(proof, signature);
     }
 
-    /// @notice Verifies and consumes a proof atomically. This is the
-    ///         function Phase 4's AttributionSettlement will actually call.
-    ///         Reverts if the proof was already consumed.
+    /// @notice Verifies and consumes a proof atomically — the function
+    ///         `AttributionSettlement.settleExecution` calls. Reverts if
+    ///         the proof was already consumed.
     function consumeUsageProof(UsageProof calldata proof, bytes calldata signature)
         external
         returns (VerifiedUsage memory usage)

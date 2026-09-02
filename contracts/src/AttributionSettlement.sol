@@ -7,33 +7,30 @@ import {CascadeRegistry} from "./CascadeRegistry.sol";
 import {ExecutionRegistry} from "./ExecutionRegistry.sol";
 
 /// @title AttributionSettlement
-/// @notice Turns a verified execution into proportional, pull-payment
-///         attribution across a model's finalized lineage graph.
+/// @notice Distributes a verified execution's fee proportionally across a
+///         model's finalized lineage graph via pull payments.
+/// @dev Funds each settlement with a protocol-configured flat fee
+///      (docs/adr/0008), never a relayer-chosen amount. Traversal walks a
+///      model's finalized parent edges, bounded by
+///      `CascadeRegistry.maxDepth()` and `maxAncestorsPerSettlement`,
+///      splitting the fee multiplicatively at each hop by that edge's
+///      registered `royaltyBps`; those shares come from `CascadeRegistry`
+///      and are not recomputed here.
 ///
-/// @dev What this contract adds on top of Phase 3, precisely:
+///      Each traversed edge emits `effectiveConfidence = min(edge
+///      confidence, the triggering usage proof's serving confidence)`
+///      (docs/adr/0006) as an audit signal — it does not gate payment. A
+///      Declared (Level 3) ancestor is paid its full registered share
+///      regardless of confidence; that tier's security is economic
+///      (stake and challenge window), not cryptographic.
 ///
-///      1. Funds a verified execution with a protocol-configured flat fee
-///         (see docs/adr/0008) — never a relayer-chosen amount.
-///      2. Walks the model's finalized parent edges, bounded by
-///         `CascadeRegistry.maxDepth()` and `maxAncestorsPerSettlement`,
-///         splitting the fee multiplicatively at each hop per that edge's
-///         registered `royaltyBps` — CascadeRegistry's own validated
-///         numbers, never recomputed or second-guessed here.
-///      3. Records, per edge, `effectiveConfidence = min(edge
-///         confidence, the triggering usage proof's serving confidence)`
-///         — see docs/adr/0006. This is emitted for transparency; it does
-///         NOT gate payment. A Level 3 (Declared) ancestor is still paid
-///         according to its registered share — that is the entire point
-///         of the optimistic, staked, challengeable design for that tier.
-///         Confidence is an audit signal here, not a payment filter.
-///      4. Credits pull-payment balances by CURRENT registered owner at
-///         settlement time — never a cached or historical owner.
+///      Balances are credited to each model's current registered owner
+///      at settlement time, not a cached or historical owner.
 ///
-///      What this contract does NOT do, and must never be described as
-///      doing: prove model identity by itself (that's Phase 3's job, to
-///      the extent Phase 3 establishes it at all — see
-///      docs/trust-model.md), verify a 0G TEE quote, or integrate with
-///      0G's own settlement contract in any way (see docs/adr/0003).
+///      Out of scope: establishing model identity (that boundary belongs
+///      to `ExecutionRegistry`, to the extent it establishes it at all —
+///      see docs/trust-model.md), verifying a 0G TEE quote, or any
+///      integration with 0G's own settlement contract (docs/adr/0003).
 contract AttributionSettlement is Ownable, ReentrancyGuard {
     // ---------------------------------------------------------------------
     // Storage
@@ -49,9 +46,9 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
     CascadeRegistry public immutable cascadeRegistry;
     ExecutionRegistry public immutable executionRegistry;
 
-    /// @notice Flat attribution fee required to settle one execution. See
-    ///         docs/adr/0008 — deliberately the only economically relevant
-    ///         number a settler supplies, and it must match this exactly.
+    /// @notice Flat fee required to settle one execution (docs/adr/0008) —
+    ///         the only economically relevant value a settler supplies, and
+    ///         it must match this exactly or the call reverts.
     uint256 public attributionFeePerExecution = 0.001 ether;
 
     /// @notice The only epoch `settleExecution` currently accepts proofs
@@ -59,13 +56,10 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
     uint64 public currentEpoch = 1;
 
     /// @dev Hard cap on total graph nodes visited per settlement call,
-    ///      independent of `CascadeRegistry.maxDepth()` (which bounds
-    ///      depth, not breadth). Ancestors beyond this cap simply receive
-    ///      no credit for that settlement — a disclosed limitation
-    ///      consistent with how CascadeRegistry already treats
-    ///      beyond-maxDepth ancestors, never a revert of the whole
-    ///      settlement (that would be a liveness bug: a legitimately
-    ///      registered but large graph could never settle at all).
+    ///      independent of `CascadeRegistry.maxDepth()` (which bounds depth,
+    ///      not breadth). Ancestors beyond this cap receive no credit for
+    ///      that settlement rather than reverting the whole call — a large
+    ///      but legitimately registered graph must still be able to settle.
     uint32 public maxAncestorsPerSettlement = 64;
 
     mapping(address => uint256) public claimable;
@@ -96,8 +90,8 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
     );
 
     /// @dev One per node in the traversal (including the served model
-    ///      itself) — the residual actually credited to that node's
-    ///      current owner after its own direct parents were paid.
+    ///      itself) — the residual credited to that node's current owner
+    ///      after its own direct parents were paid.
     event OwnerCredited(bytes32 indexed executionId, bytes32 indexed modelId, address indexed owner, uint256 amount);
 
     event Claimed(address indexed recipient, uint256 amount);
@@ -128,16 +122,16 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
     // Settlement
     // ---------------------------------------------------------------------
 
-    /// @notice Settles one verified execution: consumes its UsageProof
-    ///         (Phase 3's own replay protection — no second notion of
-    ///         execution identity introduced here), then distributes the
-    ///         attached fee across the model's finalized lineage graph.
+    /// @notice Settles one verified execution: consumes its UsageProof via
+    ///         `ExecutionRegistry` (the sole source of replay protection
+    ///         and execution identity), then distributes the attached fee
+    ///         across the model's finalized lineage graph.
     /// @dev Callable by anyone holding a valid (proof, signature) pair —
-    ///      the relayer role stays liveness-only, exactly as Phase 3
-    ///      established. It cannot choose the recipient (derived from
-    ///      CascadeRegistry state), the amount (fixed by
-    ///      `attributionFeePerExecution`), or which model's ancestry is
-    ///      used (derived from the verified proof, not calldata).
+    ///      the caller is liveness-only and controls none of the
+    ///      economically relevant inputs: the recipient is derived from
+    ///      `CascadeRegistry` state, the amount is fixed by
+    ///      `attributionFeePerExecution`, and the ancestry used is derived
+    ///      from the verified proof, not calldata.
     function settleExecution(ExecutionRegistry.UsageProof calldata proof, bytes calldata signature)
         external
         payable
@@ -148,8 +142,8 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
         if (msg.value != attributionFeePerExecution) revert IncorrectFunding();
 
         // Reverts on an invalid signature, unregistered signer, model
-        // commitment mismatch, expiry, or replay — all Phase 3's own
-        // checks, reused here rather than re-implemented.
+        // commitment mismatch, expiry, or replay — all ExecutionRegistry's
+        // own checks, not reimplemented here.
         ExecutionRegistry.VerifiedUsage memory usage = executionRegistry.consumeUsageProof(proof, signature);
 
         emit ExecutionSettled(
@@ -161,21 +155,22 @@ contract AttributionSettlement is Ownable, ReentrancyGuard {
         return usage.executionId;
     }
 
-    /// @dev Multiplicative cascade: `amount` is what flowed INTO `modelId`
+    /// @dev Multiplicative cascade: `amount` is what flowed into `modelId`
     ///      at this hop. Each finalized direct-parent edge takes its
-    ///      registered `royaltyBps` share of THAT amount (not the original
-    ///      top-level amount — matching CascadeRegistry's own
-    ///      `totalParentBps` semantics, which are scoped per-child, not
-    ///      global); the parent's share is itself recursively subject to
-    ///      the parent's OWN parent edges. Whatever is left after all
-    ///      finalized direct parents are paid is credited to `modelId`'s
-    ///      current owner. This is intentionally exact, floor-division
-    ///      integer arithmetic: `residual = amount - sum(floor-divided
-    ///      parent shares)`, so any fractional-bps rounding dust simply
-    ///      enlarges the residual credited to the nearest owner — no
-    ///      separate dust pool is needed, and conservation
-    ///      (`sum of every OwnerCredited amount across one settlement ==
-    ///      the funded amount`) is exact, not approximate.
+    ///      registered `royaltyBps` share of that amount, not the original
+    ///      top-level amount — matching `CascadeRegistry.totalParentBps`,
+    ///      which is scoped per-child, not global. Each parent's share is
+    ///      itself recursively subject to that parent's own parent edges.
+    ///      Whatever remains after all finalized direct parents are paid
+    ///      is credited to `modelId`'s current owner.
+    ///
+    ///      Uses floor-division integer arithmetic throughout:
+    ///      `residual = amount - sum(floor-divided parent shares)`, so
+    ///      fractional-bps rounding dust enlarges the residual credited to
+    ///      the nearest owner rather than requiring a separate dust pool.
+    ///      Conservation — the sum of every `OwnerCredited` amount in one
+    ///      settlement equals the funded amount — is exact, not
+    ///      approximate.
     function _distribute(
         bytes32 modelId,
         uint256 amount,

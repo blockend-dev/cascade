@@ -8,40 +8,36 @@ import {ExecutionRegistry} from "./ExecutionRegistry.sol";
 
 /// @title TrainingProvenanceRegistry
 /// @notice Structured on-chain representation of a Level 2
-///         ("AttestedTraining") provenance claim — 0G fine-tuning's signed
-///         declared inputs plus a checked output-commitment, exactly as
-///         scoped in docs/protocol-spec.md §5 and no further.
+///         ("AttestedTraining") provenance claim: 0G fine-tuning's signed
+///         declared inputs plus a checked output-commitment, scoped to
+///         docs/protocol-spec.md §5.
+/// @dev A registered record establishes that a specific, identifiable 0G
+///      provider (a registered `ExecutionRegistry` signer) signed a
+///      non-repudiable claim naming a base model, a dataset root, a
+///      training script, and a resulting model commitment, and that
+///      those commitments match what is registered in `CascadeRegistry`
+///      for those models.
 ///
-/// @dev What a registered record actually establishes: a specific,
-///      identifiable 0G provider (a registered `ExecutionRegistry` signer)
-///      signed a non-repudiable claim naming a base model, a dataset root,
-///      a training script, and a resulting model commitment — and that
-///      claim's resulting/base commitments match what's actually
-///      registered in `CascadeRegistry` for those models.
-///
-///      What it does NOT establish: that the provider's enclave actually
-///      computed the declared output from the declared inputs. That
-///      atomic input→output binding was never confirmed to exist in 0G's
-///      public fine-tuning implementation (see prior research: The
-///      Cascade Gate, The Cascade Verdict) and this contract makes no
-///      claim that it does. A registered record is circumstantial,
-///      accountable evidence — a real party is on the hook for having
-///      signed it — not a cryptographic proof of derivation. See
-///      docs/trust-model.md before treating this contract's output as
-///      anything stronger.
+///      It does not establish that the provider's enclave computed the
+///      declared output from the declared inputs — that binding is not
+///      confirmed to exist in 0G's public fine-tuning implementation,
+///      and this contract makes no claim that it does. A registered
+///      record is circumstantial, accountable evidence: a specific party
+///      is on the hook for having signed it, not a cryptographic proof
+///      of derivation. See docs/trust-model.md.
 ///
 ///      This contract has no knowledge of, and no effect on, Level 1
-///      (`servingConfidence`, entirely owned by `ExecutionRegistry` and
-///      the not-yet-built Phase 7 wrapper) or Level 3 (bare declared
-///      claims in `CascadeRegistry`). See docs/adr/0010.
+///      (`servingConfidence`, owned entirely by `ExecutionRegistry` and
+///      its attested-serving wrapper) or Level 3 (bare declared claims
+///      in `CascadeRegistry`). See docs/adr/0010.
 contract TrainingProvenanceRegistry is EIP712 {
     // ---------------------------------------------------------------------
     // Types
     // ---------------------------------------------------------------------
 
     /// @notice The signed claim. Every field is provider-attested — see
-    ///         contract-level NatSpec for exactly what that does and does
-    ///         not establish.
+    ///         contract-level NatSpec for what that does and does not
+    ///         establish.
     struct TrainingProvenanceClaim {
         bytes32 childModelId;
         bytes32 baseModelId;
@@ -125,10 +121,10 @@ contract TrainingProvenanceRegistry is EIP712 {
 
     /// @notice Registers a Level 2 provenance record for `claim.childModelId`.
     /// @dev Dual authorization (docs/adr/0010): `msg.sender` must be the
-    ///      child model's registered `CascadeRegistry` owner, AND the
+    ///      child model's registered `CascadeRegistry` owner, and the
     ///      claim must carry a registered `ExecutionRegistry` provider
-    ///      signer's signature. Neither alone is sufficient. Records are
-    ///      immutable — there is no update function, and a second
+    ///      signer's signature — neither alone is sufficient. Records are
+    ///      immutable: there is no update function, and a second
     ///      registration for the same `childModelId` reverts.
     function registerProvenance(TrainingProvenanceClaim calldata claim, bytes calldata signature)
         external
