@@ -93,6 +93,18 @@ Explorer: `https://chainscan.0g.ai/tx/0x6757aeed04f5329a78c69012c064548e956b3ad7
   reading — confirmed via `indexer/scripts/verify-frontend-datalayer.ts`.
   This is the actual data layer the frontend's Model Explorer / Model
   Detail pages depend on, exercised end to end against mainnet.
+- **Deployed durably on Railway** (`indexer/Dockerfile`), running
+  continuously and independently of any developer machine — not a
+  one-off verification run. Public HTTP endpoint:
+  `https://cascade-indexer-production-508a.up.railway.app`. Verified with
+  the same cross-origin request the live frontend actually makes
+  (`Origin: https://cascade-three-iota.vercel.app`), confirming both a
+  correct `access-control-allow-origin` response and real mainnet data
+  returned. Storage is currently ephemeral (ties to a container
+  filesystem rather than an attached volume), so a redeploy resyncs from
+  `START_BLOCK` rather than resuming — a cost in sync time only, since
+  the indexer is a rebuildable projection and never a protocol authority
+  (`docs/indexer.md`).
 
 ## What this evidence does NOT claim
 
@@ -105,11 +117,12 @@ Explorer: `https://chainscan.0g.ai/tx/0x6757aeed04f5329a78c69012c064548e956b3ad7
   Network serving, or cryptographically bound execution. Lineage
   confidence, serving confidence, and effective confidence remain the
   three separate, unmerged concepts they always were (`docs/trust-model.md`).
-- **No visual frontend screenshot from this environment** — this
-  session's development machine cannot run `vite build`/`vite dev` (a
-  pre-existing, disclosed UNC-path/esbuild limitation, unrelated to this
-  integration). What's verified above is the complete data layer the
-  frontend depends on, over real HTTP, against real mainnet data — not a
-  rendered browser screenshot. Running `web/` on a normal (non-UNC)
-  machine against the `.env` values in this repo would render this exact
-  model.
+- **No live 0G Compute/TEE demonstration** — `wrapper/`'s attested-serving
+  integration is implemented architecturally but has not been exercised
+  against real 0G Compute infrastructure.
+- The frontend is deployed and live at
+  `https://cascade-three-iota.vercel.app`, reading the indexer above over
+  real HTTP — this supersedes an earlier note in this document about
+  being unable to produce a rendered screenshot from this development
+  environment's own UNC-path limitation; that limitation was about this
+  machine, not about whether a real deployment exists.
