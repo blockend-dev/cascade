@@ -65,10 +65,16 @@ export function WalletProvider({ config, children }: { config: AppConfig; childr
     setError(null);
     try {
       const accounts = (await injected.request({ method: "eth_requestAccounts" })) as string[];
+      // Read the chain ID directly from the injected provider rather than
+      // through ethers' BrowserProvider.getNetwork() — for chains outside
+      // ethers' built-in network registry (0G mainnet included),
+      // getNetwork() has been observed to resolve a stale cached value
+      // instead of re-querying the wallet. eth_chainId always reflects
+      // the wallet's current network, matching onChainChanged below.
+      const hexChainId = (await injected.request({ method: "eth_chainId" })) as string;
       const browserProvider = new ethers.BrowserProvider(injected as unknown as ethers.Eip1193Provider);
-      const network = await browserProvider.getNetwork();
       setAccount(accounts[0] ?? null);
-      setChainId(network.chainId);
+      setChainId(BigInt(hexChainId));
       setSigner(await browserProvider.getSigner());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wallet connection was rejected.");
